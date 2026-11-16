@@ -1132,6 +1132,43 @@ filter: drop-shadow(2px 3px 0 rgba(0,0,0,.35));
   .shop-buy-btn { font-size:13px; gap:4px; }
 }
 
+
+/* Mysterious Voice tutorial */
+.tutorial-overlay {
+  position:fixed; inset:0; z-index:1200; display:none; align-items:flex-end;
+  justify-content:center; padding:24px 18px clamp(22px,5vh,58px);
+  background:rgba(0,0,0,.76); backdrop-filter:brightness(.58);
+}
+.tutorial-overlay.active { display:flex; }
+.tutorial-dialog {
+  width:min(820px, calc(100vw - 36px)); max-height:55vh; overflow-y:auto; padding:20px 24px 18px;
+  background:linear-gradient(180deg,#202026,#111115); color:#f3f3f3;
+  border:3px solid #e6e6e6; box-shadow:0 0 0 4px #080809, 8px 8px 0 rgba(0,0,0,.8), inset 0 0 0 2px #3a3a40;
+  image-rendering:pixelated; cursor:pointer;
+}
+.tutorial-speaker {
+  color:#e5d48a; font-family:'Dead Kansas','Oswald',sans-serif; font-size:clamp(18px,2.2vw,24px);
+  letter-spacing:2px; text-shadow:2px 2px 0 #000; margin-bottom:10px;
+}
+.tutorial-line {
+  min-height:76px; color:#f1f1f1; font:500 clamp(15px,1.8vw,19px)/1.55 'Oswald',sans-serif;
+  letter-spacing:.35px; white-space:pre-wrap; user-select:none;
+}
+.tutorial-bottom { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-top:12px; }
+.tutorial-hint { color:#92929b; font:12px 'Oswald',sans-serif; letter-spacing:1px; text-transform:uppercase; }
+.tutorial-next {
+  min-width:112px; padding:9px 18px; border:2px solid #f1f1f1; background:#e5d48a; color:#111;
+  font:700 15px 'Oswald',sans-serif; letter-spacing:2px; text-transform:uppercase; cursor:pointer;
+  box-shadow:3px 3px 0 #000;
+}
+.tutorial-next:disabled { opacity:.35; cursor:default; }
+.tutorial-next:not(:disabled):hover { background:#fff0ad; }
+@media(max-width:600px) {
+  .tutorial-dialog { padding:15px 15px 13px; }
+  .tutorial-line { min-height:92px; }
+  .tutorial-hint { font-size:10px; }
+}
+
 </style>
 </head>
 <body>
@@ -1253,6 +1290,18 @@ filter: drop-shadow(2px 3px 0 rgba(0,0,0,.35));
 </div>
 </div>
 
+
+<div class="tutorial-overlay" id="tutorialOverlay" aria-hidden="true">
+  <div class="tutorial-dialog" id="tutorialDialog" role="dialog" aria-modal="true" aria-labelledby="tutorialSpeaker">
+    <div class="tutorial-speaker" id="tutorialSpeaker">Mysterious Voice</div>
+    <div class="tutorial-line" id="tutorialLine"></div>
+    <div class="tutorial-bottom">
+      <div class="tutorial-hint">Click the dialogue to reveal the text</div>
+      <button class="tutorial-next" id="tutorialNext" type="button" disabled>Next</button>
+    </div>
+  </div>
+</div>
+
 <div class="pixel-overlay" id="pixelOverlay"></div>
 <div class="confirm-flash" id="flash"></div>
 
@@ -1260,7 +1309,7 @@ filter: drop-shadow(2px 3px 0 rgba(0,0,0,.35));
 let PLAYER_IDLE = "ash/character_1_idle.png";
 const footstepsAudio = new Audio("sounds/footsteps.mp3");
 footstepsAudio.loop = true;
-footstepsAudio.volume = 0.18;
+footstepsAudio.volume = 0.27;
 footstepsAudio.preload = "auto";
 
 const coinPickupAudio = new Audio("sounds/coin_pick_up.mp3");
@@ -1277,22 +1326,22 @@ glockShotAudio.preload = "auto";
 // One shared ambience track for nearby zombies (never create/restart per zombie).
 const zombieGroansAudio = new Audio("sounds/zombie_groans.mp3");
 zombieGroansAudio.loop = true;
-zombieGroansAudio.volume = 0.16;
+zombieGroansAudio.volume = 0.24;
 zombieGroansAudio.preload = "auto";
 
 // Quiet background music. It runs continuously across every screen and game state.
 const homeMusicAudio = new Audio("sounds/background_music_1.mp3");
 homeMusicAudio.loop = true;
-homeMusicAudio.volume = 0.075;
+homeMusicAudio.volume = 0.05;
 homeMusicAudio.preload = "auto";
 
 // Master volume (0–1). Base volumes are scaled by this.
 let masterVolume = 1;
-const BASE_FOOTSTEPS_VOL = 0.18;
+const BASE_FOOTSTEPS_VOL = 0.27;
 const BASE_COIN_VOL = 0.45;
 const BASE_GLOCK_VOL = 0.6;
-const BASE_ZOMBIE_GROANS_VOL = 0.16;
-const BASE_HOME_MUSIC_VOL = 0.075;
+const BASE_ZOMBIE_GROANS_VOL = 0.24;
+const BASE_HOME_MUSIC_VOL = 0.05;
 function applyMasterVolume() {
 footstepsAudio.volume = BASE_FOOTSTEPS_VOL * masterVolume;
 coinPickupAudio.volume = BASE_COIN_VOL * masterVolume;
@@ -1406,7 +1455,8 @@ const gameEl = document.getElementById('game');
 const playBtn = document.getElementById('playBtn');
 
 function syncHomeMusic() {
-  // Background music is global: never pause or rewind it when screens change.
+  // The tutorial is sound-effects-only; resume the soundtrack after it is completed.
+  if (tutorialActive) { homeMusicAudio.pause(); return; }
   if (homeMusicAudio.paused) homeMusicAudio.play().catch(() => {});
 }
 
@@ -1491,6 +1541,15 @@ let selectedIndex = 0;
 let inSelect = false;
 let isConfirming = false;
 let isPaused = false;
+let tutorialActive = false;
+let tutorialCompleted = false;
+let tutorialDialogueOpen = false;
+let tutorialStage = 'none';
+let tutorialTypingTimer = null;
+let tutorialFullLine = '';
+let tutorialTypeIndex = 0;
+let tutorialNextAction = null;
+try { tutorialCompleted = localStorage.getItem('apocalypseTutorialComplete') === 'true'; } catch (_) {}
 
 // Environment props (permanent for the run)
 const envProps = [];
@@ -1575,6 +1634,7 @@ selectEl.classList.add('active');
 inSelect = true;
 selectedIndex = 0;
 updateSelection();
+if (!tutorialCompleted) beginTutorial();
 }
 
 playBtn.addEventListener('click', goToSelect);
@@ -1718,6 +1778,9 @@ placedThisBatch.push(prop);
 
 // Each loaded world chunk (one screen-width) gets one independent 70% radiation-puddle roll.
 function rollRadiationChunk(idx) {
+  // Never generate world-chunk radiation puddles during the guided tutorial.
+  // The tutorial creates exactly one scripted puddle for its dedicated lesson.
+  if (tutorialActive) return;
   if (Math.random() >= 0.70) return;
   const chunkWidth = window.innerWidth;
   const x = idx * chunkWidth + 100 + Math.random() * Math.max(80, chunkWidth - 300);
@@ -1996,7 +2059,7 @@ goToSelect();
 return;
 }
 
-if (isConfirming || isPaused) return;
+if (isConfirming || isPaused || tutorialDialogueOpen) return;
 
 const COLS = 3;
 const total = ROSTER.length;
@@ -2123,13 +2186,21 @@ updateCoinHud();
 isPaused = false;
 pauseOverlay.classList.remove('active');
 // Permanent environment props for this run (once world is created)
-if (environmentImagesReady) {
+if (!tutorialActive && environmentImagesReady) {
 spawnEnvironmentProps();
-} else {
-discoverEnvironmentImages().then(() => spawnEnvironmentProps());
+} else if (!tutorialActive) {
+discoverEnvironmentImages().then(() => { if (!tutorialActive) spawnEnvironmentProps(); });
 }
-spawnWave(currentWave);
+if (!tutorialActive) spawnWave(currentWave);
 setupGunForRun();
+if (tutorialActive) {
+  player.hasGun = false;
+  player.ammo = { mag: 0, reloads: 0 };
+  playerSprite.src = idleSprite();
+  pickups.forEach(p => p.el.remove()); pickups.length = 0;
+  bullets.forEach(b => b.el.remove()); bullets.length = 0;
+  updateAmmoHud();
+}
 
 pixelOverlay.classList.remove('out');
 pixelOverlay.classList.add('in');
@@ -2139,6 +2210,7 @@ pixelOverlay.classList.remove('in', 'out');
 pixelOverlay.style.backgroundImage = 'none';
 pixelOverlay.style.opacity = '0';
 slamText.classList.remove('animate');
+if (tutorialActive) tutorialShowMovementIntro();
 }, 650);
 
 }, 600);
@@ -2212,7 +2284,7 @@ el.appendChild(img);
 zombieContainer.appendChild(el);
 
 const baseSpeed = Math.min(4.65, 2.45 + (wave - 1) * 0.16);
-zombies.push({
+const zombie = {
 el: el,
 img: img,
 x: x,
@@ -2226,8 +2298,13 @@ isMoving: false,
 isDying: false,
 hp: 6 + Math.floor((wave - 1) / 2),
 knockbackX: 0,
-knockbackY: 0
-});
+knockbackY: 0,
+tutorialIdle: false,
+tutorialNoDamage: false,
+tutorialTarget: false
+};
+zombies.push(zombie);
+return zombie;
 }
 
 function spawnWave(wave) {
@@ -2636,20 +2713,21 @@ createBlood(z.x - worldOffset + 70, z.y + 70);
 if (z.hp <= 0) {
 z.isDying = true;
 player.kills++;
-if (Math.random() < 0.07) {
-spawnBandageAtWorld(z.x, z.y + 42);
-}
-const dropCount = 1 + Math.floor(Math.random() * 3);
-for (let c = 0; c < dropCount; c++) {
-const ox = (Math.random() - 0.5) * 56;
-const oy = (Math.random() - 0.25) * 40;
-spawnCoinAtWorld(z.x + ox, z.y + 40 + oy);
+if (!z.tutorialTarget) {
+  if (Math.random() < 0.07) spawnBandageAtWorld(z.x, z.y + 42);
+  const dropCount = 1 + Math.floor(Math.random() * 3);
+  for (let c = 0; c < dropCount; c++) {
+    const ox = (Math.random() - 0.5) * 56;
+    const oy = (Math.random() - 0.25) * 40;
+    spawnCoinAtWorld(z.x + ox, z.y + 40 + oy);
+  }
 }
 z.img.src = ZOMBIE_IDLE;
 z.el.classList.add('dying');
 z.el.style.top = `${z.y + 200}px`;
 z.el.style.opacity = '0';
 setTimeout(() => z.el.remove(), 900);
+if (z.tutorialTarget) tutorialTargetKilled();
 }
 });
 }
@@ -2686,8 +2764,10 @@ updateDayNight(dt);
 updateEnvironmentProps();
 updateNuclearPuddles(dt);
 
-tryAmbientBandageSpawn(currentTime);
-tryAmbientCoinSpawn(currentTime);
+if (!tutorialActive) {
+  tryAmbientBandageSpawn(currentTime);
+  tryAmbientCoinSpawn(currentTime);
+}
 
 collectCoins();
 updatePickups(dt);
@@ -2783,7 +2863,7 @@ footstepsAudio.pause();
 if (!footstepsAudio.paused) footstepsAudio.currentTime = 0;
 }
 
-if (!player.dead && !waveAdvancePending &&
+if (!tutorialActive && !player.dead && !waveAdvancePending &&
 zombies.length > 0 && zombies.every(z => z.isDying)) {
 waveAdvancePending = true;
 setTimeout(() => {
@@ -2797,10 +2877,16 @@ const detectionRange = getNightDetectionRange();
 
 const playerBox = getPlayerHitbox();
 let zombieWithinGroanRange = false;
-const zombieGroanRange = 520;
 
 zombies.forEach(z => {
 if (z.isDying || player.dead) return;
+if (z.tutorialIdle) {
+  z.img.src = ZOMBIE_IDLE; z.isMoving = false; z.el.style.left = `${z.x - worldOffset}px`; z.el.style.top = `${z.y}px`;
+  const idleRect = z.el.getBoundingClientRect();
+  const frameRect = gameEl.getBoundingClientRect();
+  if (idleRect.right > frameRect.left && idleRect.left < frameRect.right && idleRect.bottom > frameRect.top && idleRect.top < frameRect.bottom) zombieWithinGroanRange = true;
+  return;
+}
 
 z.speed = (z.baseSpeed || z.speed) * nightMult * activeChar.stats.zombieSpeedMult;
 
@@ -2813,7 +2899,6 @@ const zCy = zBox.y + zBox.h / 2;
 let distX = pCx - zCx;
 let distY = pCy - zCy;
 let dist = Math.hypot(distX, distY);
-if (dist <= zombieGroanRange) zombieWithinGroanRange = true;
 let moved = false;
 
 // Stop when rectangles nearly touch (small separation gap)
@@ -2839,7 +2924,7 @@ moved = true;
 
 // Damage uses rectangle overlap. Zombies can hit you while charging (holding space).
 // Only invulnerability frames block damage.
-if (aabbOverlap(playerBox, getZombieHitbox(z)) && !player.isInvulnerable) {
+if (!z.tutorialNoDamage && aabbOverlap(playerBox, getZombieHitbox(z)) && !player.isInvulnerable) {
 const damage = Math.round((Math.floor(Math.random() * 6) + 10) * activeChar.stats.damageTakenMult);
 player.health = Math.max(0, player.health - damage);
 updateHealthBar();
@@ -2892,10 +2977,19 @@ z.el.classList.remove('face-left');
 const screenX = z.x - worldOffset;
 z.el.style.left = `${screenX}px`;
 z.el.style.top = `${z.y}px`;
+
+// Groans play whenever a living zombie is visible anywhere inside the map frame.
+// This uses the zombie's rendered bounds, not its distance from the player.
+const zombieRect = z.el.getBoundingClientRect();
+const mapRect = gameEl.getBoundingClientRect();
+if (zombieRect.right > mapRect.left && zombieRect.left < mapRect.right &&
+    zombieRect.bottom > mapRect.top && zombieRect.top < mapRect.bottom) {
+  zombieWithinGroanRange = true;
+}
 });
 
-// A single looping track covers all nearby zombies. Additional zombies do not
-// restart it; it stops only after every living zombie leaves the audible range.
+// A single looping track covers all living zombies visible in the map frame.
+// Additional zombies do not restart it; it stops when none are visible.
 if (zombieWithinGroanRange && !player.dead) {
   if (zombieGroansAudio.paused) zombieGroansAudio.play().then(() => { zombieGroansAudioUnlocked = true; }).catch(() => {});
 } else if (!zombieGroansAudio.paused) {
@@ -3183,6 +3277,7 @@ function closeRoundShop() {
     setTimeout(() => {
       pixelOverlay.classList.remove('in');
       pixelOverlay.style.backgroundImage = 'none';
+      pixelOverlay.style.zIndex = '';
     }, 650);
   }, 650);
 }
@@ -3410,8 +3505,10 @@ addPickup('ammo', x, y);
 function updatePickups() {
 // One 30% roll for each screen-width of world as it comes into reach.
 const playerWorldX = player.x + worldOffset;
-while (nextAmmoChunk * window.innerWidth <= playerWorldX + window.innerWidth) {
-rollAmmoChunk(nextAmmoChunk++);
+if (!tutorialActive) {
+  while (nextAmmoChunk * window.innerWidth <= playerWorldX + window.innerWidth) {
+    rollAmmoChunk(nextAmmoChunk++);
+  }
 }
 
 for (let i = pickups.length - 1; i >= 0; i--) {
@@ -3603,20 +3700,21 @@ createBlood(z.x - worldOffset + 70, z.y + 70);
 if (z.hp <= 0 && !z.isDying) {
 z.isDying = true;
 player.kills++;
-if (Math.random() < 0.07) {
-spawnBandageAtWorld(z.x, z.y + 42);
-}
-const dropCount = 1 + Math.floor(Math.random() * 3);
-for (let c = 0; c < dropCount; c++) {
-const ox = (Math.random() - 0.5) * 56;
-const oy = (Math.random() - 0.25) * 40;
-spawnCoinAtWorld(z.x + ox, z.y + 40 + oy);
+if (!z.tutorialTarget) {
+  if (Math.random() < 0.07) spawnBandageAtWorld(z.x, z.y + 42);
+  const dropCount = 1 + Math.floor(Math.random() * 3);
+  for (let c = 0; c < dropCount; c++) {
+    const ox = (Math.random() - 0.5) * 56;
+    const oy = (Math.random() - 0.25) * 40;
+    spawnCoinAtWorld(z.x + ox, z.y + 40 + oy);
+  }
 }
 z.img.src = ZOMBIE_IDLE;
 z.el.classList.add('dying');
 z.el.style.top = `${z.y + 200}px`;
 z.el.style.opacity = '0';
 setTimeout(() => z.el.remove(), 900);
+if (z.tutorialTarget) tutorialTargetKilled();
 }
 }
 
@@ -3665,6 +3763,305 @@ b.el.style.left = `${screenX}px`;
 updateAmmoHud();
 updateGame(performance.now());
 updateSelection();
+
+
+/* ==========================================================
+MYSTERIOUS VOICE NEW-PLAYER TUTORIAL
+========================================================== */
+const tutorialOverlay = document.getElementById('tutorialOverlay');
+const tutorialDialog = document.getElementById('tutorialDialog');
+const tutorialSpeaker = document.getElementById('tutorialSpeaker');
+const tutorialLine = document.getElementById('tutorialLine');
+const tutorialNext = document.getElementById('tutorialNext');
+
+function tutorialStopTyping() {
+  if (tutorialTypingTimer) clearInterval(tutorialTypingTimer);
+  tutorialTypingTimer = null;
+}
+function tutorialRevealAll() {
+  tutorialStopTyping();
+  tutorialTypeIndex = tutorialFullLine.length;
+  tutorialLine.textContent = tutorialFullLine;
+  tutorialNext.disabled = false;
+}
+function tutorialShowDialogue(text, onNext) {
+  tutorialStopTyping();
+  tutorialDialogueOpen = true;
+  isPaused = true;
+  tutorialNextAction = onNext || null;
+  tutorialFullLine = text;
+  tutorialTypeIndex = 0;
+  tutorialLine.textContent = '';
+  tutorialNext.disabled = true;
+  tutorialOverlay.classList.add('active');
+  tutorialOverlay.setAttribute('aria-hidden','false');
+  tutorialSpeaker.textContent = 'Mysterious Voice';
+  tutorialTypingTimer = setInterval(() => {
+    tutorialTypeIndex++;
+    tutorialLine.textContent = tutorialFullLine.slice(0, tutorialTypeIndex);
+    if (tutorialTypeIndex >= tutorialFullLine.length) tutorialRevealAll();
+  }, 19);
+}
+function tutorialCloseDialogue() {
+  tutorialStopTyping();
+  tutorialDialogueOpen = false;
+  tutorialOverlay.classList.remove('active');
+  tutorialOverlay.setAttribute('aria-hidden','true');
+  // Leave the scene unobstructed briefly so players can actually look at
+  // the character, item, zombie, shop, or environment being explained.
+  isPaused = false;
+  const action = tutorialNextAction;
+  tutorialNextAction = null;
+  if (action) {
+    window.setTimeout(() => {
+      if (tutorialActive && !tutorialDialogueOpen) action();
+    }, 950);
+  }
+}
+tutorialDialog.addEventListener('click', (e) => {
+  if (e.target === tutorialNext) return;
+  if (tutorialTypingTimer) tutorialRevealAll();
+});
+tutorialNext.addEventListener('click', () => {
+  if (tutorialTypingTimer) { tutorialRevealAll(); return; }
+  if (!tutorialNext.disabled) tutorialCloseDialogue();
+});
+
+async function tutorialWaitForSceneReady() {
+  // Let DOM/layout changes land and paint while the pixel cover is opaque.
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+  // Wait for images in the currently visible game/menu/shop scene to finish
+  // decoding. Broken or slow optional assets must never hold the transition.
+  const visibleRoots = [gameEl, selectEl, homeEl, roundShopOverlay];
+  const images = visibleRoots
+    .filter(root => root && (root.classList.contains('active') || root === roundShopOverlay && root.classList.contains('active')))
+    .flatMap(root => Array.from(root.querySelectorAll('img')))
+    .filter(img => img.getAttribute('src') && !img.complete);
+  if (images.length) {
+    await Promise.race([
+      Promise.all(images.map(img => new Promise(resolve => {
+        img.addEventListener('load', resolve, { once:true });
+        img.addEventListener('error', resolve, { once:true });
+      }))),
+      new Promise(resolve => setTimeout(resolve, 1200))
+    ]);
+  }
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
+function tutorialBeginPixelTransition(callback) {
+  pixelOverlay.style.zIndex = '1300';
+  pixelOverlay.classList.remove('in','out');
+  pixelOverlay.style.opacity = '0';
+  pixelOverlay.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' fill='%230b0b0d'/%3E%3Crect width='16' height='16' fill='%23111' opacity='.5'/%3E%3C/svg%3E")`;
+  void pixelOverlay.offsetWidth;
+  pixelOverlay.classList.add('out');
+  setTimeout(async () => {
+    // Swap scenes only after the cover is fully opaque.
+    callback();
+    await tutorialWaitForSceneReady();
+    pixelOverlay.classList.remove('out');
+    void pixelOverlay.offsetWidth;
+    requestAnimationFrame(() => {
+      pixelOverlay.classList.add('in');
+      setTimeout(() => {
+        pixelOverlay.classList.remove('in');
+        pixelOverlay.style.backgroundImage = 'none';
+        pixelOverlay.style.opacity = '0';
+        pixelOverlay.style.zIndex = '';
+      }, 650);
+    });
+  }, 620);
+}
+
+function beginTutorial() {
+  tutorialActive = true;
+  tutorialStage = 'intro';
+  homeMusicAudio.pause();
+  homeMusicAudio.currentTime = 0;
+  tutorialShowDialogue("Hey there, you must be new around here. Welcome to Apocalypse! I'm here to teach you the basics of how to survive and thrive.", () => {
+    tutorialShowDialogue('This is the character selection menu. Use the arrow keys to move to whatever character you\'d like to pick, then hit Enter.', () => {
+      tutorialStage = 'select_character';
+    });
+  });
+}
+
+function tutorialShowMovementIntro() {
+  tutorialStage = 'movement_intro';
+  tutorialShowDialogue('You can walk around with WASD, or use the arrow keys. Every character has a knife — press Space to do a stab attack. You can hold down stab longer to deal more damage, and it will flash yellow particles once you\'re at full strength.', () => {
+    tutorialStage = 'wait_stab';
+    const z = spawnZombie(player.x + worldOffset + 165, player.y, 1);
+    z.tutorialIdle = true;
+    z.hp = 999;
+    z.facing = 'left';
+    z.el.classList.add('face-left');
+  });
+}
+
+function tutorialRemoveZombies() {
+  zombies.forEach(z => z.el.remove());
+  zombies.length = 0;
+}
+function tutorialSpawnGun() {
+  tutorialStage = 'wait_gun';
+  player.hasGun = false;
+  player.ammo = { mag: 0, reloads: 0 };
+  playerSprite.src = idleSprite();
+  pickups.forEach(p => p.el.remove());
+  pickups.length = 0;
+  addPickup('glock', player.x + worldOffset + 170, player.y + 62);
+  updateAmmoHud();
+}
+function tutorialGunPickedUp() {
+  if (!tutorialActive || tutorialStage !== 'wait_gun') return;
+  tutorialStage = 'gun_picked';
+  tutorialShowDialogue('Great work, now you can click anywhere to shoot where your character is facing. Try it!', () => {
+    tutorialStage = 'wait_shoot';
+    tutorialRemoveZombies();
+    const z = spawnZombie(player.x + worldOffset + Math.max(390, window.innerWidth * .52), player.y, 1);
+    z.tutorialTarget = true;
+    z.tutorialNoDamage = true;
+    z.baseSpeed = 0.62;
+    z.speed = 0.62;
+    z.hp = 3;
+    z.facing = 'left';
+    z.el.classList.add('face-left');
+  });
+}
+function tutorialTargetKilled() {
+  if (!tutorialActive || tutorialStage !== 'wait_shoot') return;
+  tutorialStage = 'target_killed';
+  isPaused = true;
+  setTimeout(() => {
+    if (!tutorialActive || tutorialStage !== 'target_killed') return;
+    tutorialShowDialogue("Sweet. Now I'll show you the round shop.", () => tutorialOpenShop());
+  }, 650);
+}
+function tutorialOpenShop() {
+  tutorialStage = 'shop_buy';
+  isPaused = true;
+  tutorialBeginPixelTransition(() => {
+  isPaused = false;
+  isRoundShopOpen = true;
+  shopBoughtSomething = false;
+  player.coins = 100;
+  shopSubtitle.textContent = 'Tutorial supplies — everything is free';
+  currentShopOffers = [
+    { id:'medkit', title:'Medkit', description:'Restores your health.', image:'items/medkit.png', price:0, weight:1 },
+    { id:'drugs', title:'Drugs', description:'Reduces your radiation poisoning.', image:'items/drugs.png', price:0, weight:1 },
+    { id:'adrenaline', title:'Adrenalin', description:'Get a burst of energy for 15 seconds.', image:'items/adrenalin_needle.png', price:0, weight:1 }
+  ];
+  roundShopNext.textContent = 'Buy an item';
+  roundShopNext.disabled = true;
+  renderRoundShop();
+  roundShopNext.textContent = 'Buy an item';
+  roundShopNext.disabled = true;
+  roundShopOverlay.classList.add('active');
+  roundShopOverlay.setAttribute('aria-hidden','false');
+  updateCoinHud();
+  });
+}
+function tutorialAfterShopPurchase() {
+  if (!tutorialActive || tutorialStage !== 'shop_buy') return;
+  tutorialStage = 'shop_bought';
+  isRoundShopOpen = false;
+  roundShopOverlay.classList.remove('active');
+  roundShopOverlay.setAttribute('aria-hidden','true');
+  roundShopNext.disabled = false;
+  roundShopNext.textContent = 'Skip';
+  adrenalinePending = false;
+  adrenalineUntil = 0;
+  gameEl.classList.remove('adrenaline-active');
+  updateBoostHud();
+  tutorialShowDialogue("Great work! Lastly, I'll show you the zombies.", () => {
+    isPaused = true;
+    tutorialBeginPixelTransition(() => {
+      tutorialStage = 'zombie_lesson';
+      tutorialRemoveZombies();
+      const z = spawnZombie(player.x + worldOffset + 330, player.y, 1);
+      z.tutorialIdle = true;
+      z.hp = 999;
+      z.facing = 'left';
+      z.el.classList.add('face-left');
+      // The zombie explanation comes first with no radioactive puddles present.
+      tutorialShowDialogue('These guys are zombies. Each wave, more come in and they are even stronger and faster every wave. Sometimes they can even drop good loot!', () => {
+        // Only create the scripted puddle when its own explanation is shown.
+        tutorialStage = 'puddle_lesson';
+        nuclearPuddles.forEach(p => p.el.remove());
+        nuclearPuddles.length = 0;
+        const puddleWorldX = player.x + worldOffset + 300;
+        spawnNuclearPuddle(puddleWorldX);
+        const puddle = nuclearPuddles[nuclearPuddles.length - 1];
+        if (puddle) {
+          puddle.y = Math.min(window.innerHeight - puddle.h - 35, Math.max(70, player.y + 55));
+          puddle.el.style.top = `${puddle.y}px`;
+          puddle.el.style.left = `${puddle.x - worldOffset}px`;
+        }
+        tutorialShowDialogue("Oh, almost forgot! Haha, these bad boys are radioactive puddles. They were left here after the nuclear warfare that left our planet Earth like this. Make sure not to go near them, or worse — touch them. They contain a high frequency of radiation that can turn you into a zombie and kill you! You can check your radioactivity levels on the top left of the screen. If that gets too high, make sure to buy some drugs from the round shop.", () => {
+          tutorialReturnHome();
+        });
+      });
+    });
+  });
+}
+function tutorialReturnHome() {
+  isPaused = true;
+  tutorialBeginPixelTransition(() => {
+    gameEl.classList.remove('active');
+    selectEl.classList.remove('active');
+    homeEl.classList.add('active');
+    inSelect = false;
+    isRoundShopOpen = false;
+    isPaused = true;
+    tutorialShowDialogue("And that's it! Anything else you need — I think you'll figure it out on your journey. Good luck! And don't die.", () => {
+      tutorialActive = false;
+      tutorialCompleted = true;
+      tutorialStage = 'complete';
+      isPaused = false;
+      try { localStorage.setItem('apocalypseTutorialComplete','true'); } catch (_) {}
+      tutorialDialogueOpen = false;
+      tutorialOverlay.classList.remove('active');
+      tutorialOverlay.setAttribute('aria-hidden','true');
+      // Persist completion first, then perform a clean page restart. All world
+      // chunks, entities, timers, audio state and transient tutorial state are
+      // rebuilt from scratch, while localStorage prevents the tutorial replay.
+      try { localStorage.setItem('apocalypseTutorialComplete','true'); } catch (_) {}
+      syncHomeMusic();
+      window.setTimeout(() => window.location.reload(), 180);
+    });
+  });
+}
+
+// The first Space press/release after the movement lesson advances to the pickup lesson.
+window.addEventListener('keyup', (e) => {
+  if (e.key !== ' ' || !tutorialActive || tutorialStage !== 'wait_stab') return;
+  tutorialStage = 'stab_done';
+  isPaused = true;
+  setTimeout(() => {
+    if (!tutorialActive || tutorialStage !== 'stab_done') return;
+    tutorialShowDialogue("Nice! Now I'll show you how to shoot. Walk up to an item, and press E to pick up items if they can be picked up. You can tell by the keybind hovering over them when you get close.", () => {
+      tutorialRemoveZombies();
+      tutorialSpawnGun();
+    });
+  }, 330);
+});
+
+// Wrap the existing pickup handler so the tutorial advances only after the real E pickup succeeds.
+const originalTutorialCollectPickup = collectPickup;
+collectPickup = function(p) {
+  const pickedKind = p && p.kind;
+  originalTutorialCollectPickup(p);
+  if (tutorialActive && tutorialStage === 'wait_gun' && pickedKind === 'glock') tutorialGunPickedUp();
+};
+
+// Tutorial purchases use the real shop purchase code, then advance after the first free item.
+const originalTutorialPurchaseShopOffer = purchaseShopOffer;
+purchaseShopOffer = function(index) {
+  originalTutorialPurchaseShopOffer(index);
+  if (tutorialActive && tutorialStage === 'shop_buy') tutorialAfterShopPurchase();
+};
+
 </script>
 </body>
 </html>
