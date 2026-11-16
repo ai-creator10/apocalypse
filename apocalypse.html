@@ -1,0 +1,3670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APOCALYPSE</title>
+<link href="https://fonts.cdnfonts.com/css/dead-kansas" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+--bg: #0b0b0d;
+--panel: #141417;
+--panel-hi: #1d1d21;
+--text: #f2f2f2;
+--muted: #8a8a92;
+--border: #2a2a2e;
+--white: #ffffff;
+--good: #4ade80;
+--bad: #ef4444;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+height: 100%;
+background: var(--bg);
+color: var(--text);
+font-family: 'Oswald', sans-serif;
+overflow: hidden;
+user-select: none;
+}
+
+.screen {
+position: absolute;
+inset: 0;
+display: flex;
+flex-direction: column;
+opacity: 0;
+pointer-events: none;
+transition: opacity .45s ease;
+}
+.screen.active { opacity: 1; pointer-events: all; }
+
+#home {
+align-items: center;
+justify-content: center;
+background:
+radial-gradient(ellipse at 50% 55%, rgba(255,255,255,0.05), transparent 55%),
+radial-gradient(ellipse at 50% 110%, rgba(255,255,255,0.08), transparent 60%),
+var(--bg);
+overflow: hidden;
+}
+
+#home::before {
+content: "";
+position: absolute;
+inset: 0;
+background-image:
+linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+background-size: 64px 64px;
+mask-image: radial-gradient(ellipse at 50% 50%, black 20%, transparent 75%);
+-webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 20%, transparent 75%);
+pointer-events: none;
+}
+
+#home::after {
+content: "";
+position: absolute;
+inset: 0;
+background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
+pointer-events: none;
+}
+
+.scanlines {
+position: absolute;
+inset: 0;
+background: repeating-linear-gradient(
+0deg,
+transparent 0 2px,
+rgba(255,255,255,0.02) 2px 3px
+);
+pointer-events: none;
+z-index: 3;
+}
+
+.home-inner {
+position: relative;
+z-index: 2;
+text-align: center;
+display: flex;
+flex-direction: column;
+align-items: center;
+}
+
+.home-title {
+font-family: 'Dead Kansas', 'Oswald', sans-serif;
+font-weight: normal;
+font-size: clamp(48px, 9vw, 130px);
+line-height: .9;
+letter-spacing: 8px;
+text-transform: uppercase;
+color: var(--text);
+position: relative;
+text-shadow:
+0 0 1px rgba(255,255,255,.5),
+0 4px 0 rgba(0,0,0,.6),
+0 0 60px rgba(255,255,255,.15);
+}
+
+.home-title::before,
+.home-title::after {
+content: "";
+position: absolute;
+top: 50%;
+width: 18vw;
+height: 1px;
+background: linear-gradient(90deg, transparent, rgba(255,255,255,.5));
+}
+.home-title::before { right: calc(100% + 30px); }
+.home-title::after {
+left: calc(100% + 30px);
+background: linear-gradient(90deg, rgba(255,255,255,.5), transparent);
+}
+
+.play-btn {
+margin-top: 64px;
+font-family: 'Oswald', sans-serif;
+font-weight: 600;
+font-size: 22px;
+letter-spacing: 10px;
+text-transform: uppercase;
+padding: 16px 74px;
+color: var(--text);
+background: rgba(0,0,0,0.35);
+border: 1px solid var(--white);
+cursor: pointer;
+position: relative;
+transition: all .2s ease;
+backdrop-filter: blur(4px);
+clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+}
+.play-btn:hover, .play-btn:focus-visible {
+background: var(--white);
+color: #0b0b0d;
+letter-spacing: 13px;
+outline: none;
+box-shadow: 0 0 40px rgba(255,255,255,.3);
+}
+
+.corner {
+position: absolute;
+width: 28px;
+height: 28px;
+border: 1px solid rgba(255,255,255,.35);
+pointer-events: none;
+z-index: 2;
+}
+.corner.tl { top: 26px; left: 26px; border-right: none; border-bottom: none; }
+.corner.tr { top: 26px; right: 26px; border-left: none; border-bottom: none; }
+.corner.bl { bottom: 26px; left: 26px; border-right: none; border-top: none; }
+.corner.br { bottom: 26px; right: 26px; border-left: none; border-top: none; }
+
+#select {
+flex-direction: row;
+background: var(--bg);
+}
+
+.roster {
+width: 260px;
+height: 100%;
+display: flex;
+flex-direction: column;
+border-right: 1px solid var(--border);
+padding: 40px 24px;
+flex-shrink: 0;
+}
+
+.grid {
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 8px;
+align-content: start;
+}
+
+.cell {
+aspect-ratio: 1 / 1;
+background: var(--panel);
+border: 1px solid var(--border);
+position: relative;
+cursor: pointer;
+display: flex;
+align-items: center;
+justify-content: center;
+overflow: hidden;
+transition: border-color .12s ease, background .12s ease, transform .12s ease;
+}
+
+.cell img {
+width: 82%;
+height: 82%;
+object-fit: contain;
+display: block;
+image-rendering: pixelated;
+image-rendering: crisp-edges;
+filter: grayscale(1) brightness(0.65);
+transition: filter .15s ease;
+}
+
+.cell.selected {
+border-color: var(--white);
+background: var(--panel-hi);
+transform: scale(1.05);
+box-shadow: 0 0 0 1px var(--white);
+}
+.cell.selected img {
+filter: grayscale(0) brightness(1.05);
+}
+
+.preview {
+flex: 1;
+height: 100%;
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 30px 48px 24px;
+position: relative;
+overflow: hidden;
+}
+
+.stage {
+flex: 1;
+min-height: 0;
+width: 100%;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: flex-end;
+position: relative;
+padding-top: 10px;
+}
+
+.floor {
+position: absolute;
+bottom: 0;
+width: 60%;
+height: 8px;
+background: radial-gradient(ellipse, rgba(255,255,255,.45), transparent 70%);
+filter: blur(3px);
+pointer-events: none;
+}
+
+.big-char {
+width: min(75%, 460px);
+height: min(95%, 600px);
+max-height: 100%;
+position: relative;
+z-index: 2;
+display: flex;
+align-items: flex-end;
+justify-content: center;
+transition: transform .3s ease, opacity .3s ease;
+filter: drop-shadow(0 0 40px rgba(255,255,255,.12));
+}
+
+.big-char img {
+width: 100%;
+height: 100%;
+object-fit: contain;
+display: block;
+image-rendering: pixelated;
+image-rendering: crisp-edges;
+}
+
+.big-char.swap { transform: scale(.94); opacity: .35; }
+
+.info {
+width: 100%;
+max-width: 640px;
+margin-top: 18px;
+padding-top: 18px;
+border-top: 1px solid var(--border);
+display: flex;
+flex-direction: column;
+align-items: center;
+text-align: center;
+flex-shrink: 0;
+}
+
+.char-name {
+font-family: 'Dead Kansas', 'Oswald', sans-serif;
+font-weight: normal;
+font-size: 40px;
+letter-spacing: 4px;
+text-transform: uppercase;
+line-height: 1;
+margin-bottom: 4px;
+}
+
+.char-style {
+font-family: 'Oswald', sans-serif;
+font-size: 13px;
+letter-spacing: 4px;
+text-transform: uppercase;
+color: var(--muted);
+margin-bottom: 16px;
+}
+
+.traits {
+display: flex;
+gap: 44px;
+justify-content: center;
+flex-wrap: wrap;
+}
+.traits-col { min-width: 150px; text-align: left; }
+.traits-col h4 {
+font-family: 'Oswald', sans-serif;
+font-size: 11px;
+letter-spacing: 3px;
+text-transform: uppercase;
+color: var(--muted);
+margin-bottom: 8px;
+font-weight: normal;
+}
+.traits-col ul {
+list-style: none;
+display: flex;
+flex-direction: column;
+gap: 4px;
+}
+.traits-col li {
+font-family: 'Oswald', sans-serif;
+font-size: 13px;
+letter-spacing: 1px;
+line-height: 1.3;
+}
+.traits-col.buff li::before { content: "▲ "; color: var(--good); font-size: 10px; }
+.traits-col.nerf li::before { content: "▼ "; color: var(--bad); font-size: 10px; }
+
+#game {
+background: #6d5a44;
+z-index: 100;
+overflow: hidden;
+}
+
+.grass {
+position: absolute;
+top: 0;
+bottom: 0;
+width: 120px;
+background: #1b2115;
+box-shadow: inset 0 0 50px rgba(0,0,0,0.9);
+pointer-events: none;
+z-index: 5;
+}
+.grass.left { left: 0; border-right: 2px solid #0a0d08; }
+.grass.right { right: 0; border-left: 2px solid #0a0d08; }
+
+.dirt-field {
+position: absolute;
+inset: 0;
+background-color: #6d5a44;
+background-image:
+radial-gradient(circle at 20% 30%, #5c4a36 3px, transparent 4px),
+radial-gradient(circle at 80% 60%, #5c4a36 3px, transparent 4px),
+radial-gradient(circle at 40% 80%, #5c4a36 3px, transparent 4px),
+radial-gradient(circle at 70% 20%, #5c4a36 3px, transparent 4px);
+background-size: 150px 150px;
+z-index: 1;
+}
+
+.player-wrapper {
+position: absolute;
+width: 140px;
+height: 140px;
+z-index: 10;
+transform-origin: center bottom;
+}
+
+.zombie-wrapper {
+position: absolute;
+width: 140px;
+height: 140px;
+z-index: 8;
+transform-origin: center bottom;
+}
+
+.zombie-wrapper.dying {
+transition: top 0.85s ease-out, opacity 0.85s ease-out;
+}
+
+.sprite {
+width: 100%;
+height: 100%;
+object-fit: contain;
+image-rendering: pixelated;
+image-rendering: crisp-edges;
+transition: transform 0.1s ease;
+transform: scaleX(1);
+}
+
+.face-left .sprite {
+transform: scaleX(-1);
+}
+
+.wave-display {
+position: absolute;
+top: 22px;
+left: 50%;
+transform: translateX(-50%);
+z-index: 60;
+color: #fff;
+font-family: 'Dead Kansas', 'Oswald', sans-serif;
+font-size: clamp(24px, 3vw, 38px);
+font-weight: normal;
+letter-spacing: 3px;
+text-shadow: 3px 3px 0 #17120e, 0 0 12px rgba(0,0,0,.7);
+pointer-events: none;
+white-space: nowrap;
+}
+
+.bandage-item, .coin-item {
+position: absolute;
+width: 42px;
+height: 42px;
+object-fit: contain;
+image-rendering: pixelated;
+image-rendering: crisp-edges;
+z-index: 9;
+pointer-events: none;
+filter: drop-shadow(2px 3px 0 rgba(0,0,0,.45));
+animation: medkitBob 1.1s steps(2, end) infinite;
+}
+.coin-item {
+width: 36px;
+height: 36px;
+animation: coinBob 1.0s steps(2, end) infinite;
+}
+@keyframes medkitBob {
+0%, 100% { transform: translateY(0); }
+50% { transform: translateY(-4px); }
+}
+@keyframes coinBob {
+0%, 100% { transform: translateY(0) rotate(0deg); }
+50% { transform: translateY(-5px) rotate(8deg); }
+}
+
+.day-night-overlay {
+position: absolute;
+inset: 0;
+z-index: 4;
+pointer-events: none;
+transition: background 1.2s ease, opacity 1.2s ease;
+background: transparent;
+opacity: 0;
+}
+.day-night-overlay.night {
+background: rgba(8, 12, 28, 0.52);
+opacity: 1;
+}
+.time-indicator {
+position: absolute;
+top: 22px;
+right: 28px;
+z-index: 60;
+font-family: 'Oswald', sans-serif;
+font-size: 14px;
+letter-spacing: 2px;
+text-transform: uppercase;
+color: #fff;
+text-shadow: 2px 2px 0 #17120e, 0 0 8px rgba(0,0,0,.6);
+pointer-events: none;
+opacity: 0.9;
+}
+
+.coin-spark {
+position: absolute;
+width: 6px;
+height: 6px;
+background: #ffe45c;
+z-index: 35;
+pointer-events: none;
+image-rendering: pixelated;
+box-shadow: 0 0 0 1px rgba(180,120,20,.7);
+animation: coinSparkPop 0.45s steps(4, end) forwards;
+}
+.coin-spark::before,
+.coin-spark::after {
+content: "";
+position: absolute;
+background: #fff2a6;
+}
+.coin-spark::before { width: 2px; height: 10px; left: 2px; top: -2px; }
+.coin-spark::after { width: 10px; height: 2px; left: -2px; top: 2px; }
+@keyframes coinSparkPop {
+0% { opacity: 1; transform: scale(0.6) translateY(0); }
+40% { opacity: 1; transform: scale(1.15) translateY(-6px); }
+100% { opacity: 0; transform: scale(0.8) translateY(-18px); }
+}
+
+.heal-flash {
+position: fixed;
+inset: 0;
+z-index: 90;
+opacity: 0;
+pointer-events: none;
+box-shadow: inset 0 0 0 0 rgba(164,255,155,0);
+}
+.heal-flash.active {
+animation: healScreenFlash .48s ease-out forwards;
+}
+@keyframes healScreenFlash {
+0% {
+opacity: 0;
+background: rgba(170,255,160,0);
+box-shadow: inset 0 0 0 0 rgba(164,255,155,0);
+}
+22% {
+opacity: 1;
+background: rgba(170,255,160,.22);
+box-shadow: inset 0 0 0 13px rgba(164,255,155,.95);
+}
+100% {
+opacity: 0;
+background: rgba(170,255,160,0);
+box-shadow: inset 0 0 0 0 rgba(164,255,155,0);
+}
+}
+
+.heal-plus {
+position: absolute;
+width: 7px;
+height: 7px;
+background: #9cff91;
+z-index: 35;
+pointer-events: none;
+image-rendering: pixelated;
+box-shadow: 0 0 0 1px rgba(27,100,30,.65);
+animation: healPlusRise .72s steps(5, end) forwards;
+}
+.heal-plus::before,
+.heal-plus::after {
+content: "";
+position: absolute;
+background: #9cff91;
+box-shadow: 0 0 0 1px rgba(27,100,30,.5);
+}
+.heal-plus::before { width: 3px; height: 15px; left: 2px; top: -4px; }
+.heal-plus::after { width: 15px; height: 3px; left: -4px; top: 2px; }
+@keyframes healPlusRise {
+0% { opacity: 0; transform: translateY(8px) scale(.7); }
+20% { opacity: 1; transform: translateY(0) scale(1); }
+100% { opacity: 0; transform: translateY(-34px) scale(.85); }
+}
+
+.health-bar-container {
+position: absolute;
+bottom: 30px;
+left: 50%;
+transform: translateX(-50%);
+width: 300px;
+height: 30px;
+background: #000;
+border: 4px solid #333;
+box-shadow: 0 4px 0 rgba(0,0,0,0.5);
+z-index: 50;
+display: flex;
+align-items: center;
+padding: 2px;
+}
+
+.health-bar-fill {
+height: 100%;
+width: 100%;
+background-color: #4ade80;
+transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+.health-text {
+position: absolute;
+left: 12px;
+font-family: 'Oswald', sans-serif;
+font-size: 16px;
+font-weight: 600;
+color: var(--white);
+text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+pointer-events: none;
+z-index: 2;
+}
+
+#game.shake { animation: damageShake 0.22s steps(3, end); }
+@keyframes damageShake {
+0% { transform: translate(0, 0); }
+20% { transform: translate(-5px, 2px); }
+40% { transform: translate(5px, -2px); }
+60% { transform: translate(-4px, -1px); }
+80% { transform: translate(3px, 2px); }
+100% { transform: translate(0, 0); }
+}
+.charge-particle {
+position: absolute; width: 5px; height: 5px; background: #ffe45c;
+box-shadow: 0 0 0 2px rgba(255,220,60,.22); z-index: 30; pointer-events: none;
+}
+.charge-particle.cross::before, .charge-particle.cross::after {
+content: ""; position: absolute; background: #fff2a6;
+}
+.charge-particle.cross::before { width: 3px; height: 11px; left: 1px; top: -3px; }
+.charge-particle.cross::after { width: 11px; height: 3px; left: -3px; top: 1px; }
+
+.death-overlay {
+position: fixed; inset: 0; z-index: 500; display: none; align-items: center;
+justify-content: center; background: rgba(110,0,8,.48);
+backdrop-filter: blur(7px) saturate(.65); -webkit-backdrop-filter: blur(7px) saturate(.65);
+}
+.death-overlay.active { display: flex; }
+.death-content {
+display: flex; flex-direction: column; align-items: center;
+justify-content: center; gap: 12px; transform: translateY(-12px);
+}
+.home-title, .death-stamp {
+font-family: 'Dead Kansas', 'Oswald', sans-serif;
+font-weight: normal;
+}
+.death-stamp {
+color: #e11d2e;
+font-size: clamp(76px,13vw,170px); letter-spacing: 8px; line-height: 1;
+text-transform: uppercase; text-shadow: 5px 5px 0 #260307,-2px -2px 0 #260307,2px -2px 0 #260307,-2px 2px 0 #260307;
+transform: rotate(-7deg) scale(2.8); opacity: 0;
+animation: deathStampIn .65s cubic-bezier(.1,.8,.2,1) forwards;
+}
+@keyframes deathStampIn {
+0% { opacity: 0; transform: rotate(-7deg) scale(3.2); }
+65% { opacity: 1; transform: rotate(-7deg) scale(.92); }
+82% { transform: rotate(-7deg) scale(1.06); }
+100% { opacity: 1; transform: rotate(-7deg) scale(1); }
+}
+.death-kills {
+position: static; margin-top: 4px;
+text-align: center; color: #fff; font-size: 20px; letter-spacing: 3px;
+text-shadow: 2px 2px #300;
+}
+.death-reason { margin-top:8px; color:#d7d7d7; font-family:'Oswald',sans-serif; font-size:18px; letter-spacing:1px; text-align:center; text-shadow:2px 2px 0 #000; }
+.death-retry {
+position: absolute; bottom: 8%; left: 0; right: 0; text-align: center;
+color: #fff; font-size: 20px; letter-spacing: 2px; text-shadow: 2px 2px #300;
+}
+
+.blood-particle {
+position: absolute;
+background: #e11d48;
+width: 8px;
+height: 8px;
+z-index: 15;
+pointer-events: none;
+box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+}
+
+.slam-text {
+position: absolute;
+top: 10%;
+right: -5%;
+font-family: 'Dead Kansas', 'Oswald', sans-serif;
+font-size: 80px;
+color: var(--white);
+text-transform: uppercase;
+letter-spacing: 4px;
+text-shadow:
+4px 4px 0px var(--bg),
+-1px -1px 0px var(--bg),
+1px -1px 0px var(--bg),
+-1px 1px 0px var(--bg);
+z-index: 50;
+pointer-events: none;
+opacity: 0;
+transform: scale(3) rotate(-15deg);
+}
+
+.slam-text.animate {
+animation: slamIn 1.5s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes slamIn {
+0% { opacity: 0; transform: scale(4) rotate(-15deg); }
+10% { opacity: 1; transform: scale(0.9) rotate(-5deg); }
+15% { transform: scale(1) rotate(-5deg); }
+25% { transform: scale(1) rotate(-5deg); }
+100% { opacity: 1; transform: scale(1) rotate(-5deg); }
+}
+
+.pixel-overlay {
+position: fixed;
+inset: 0;
+background-size: 32px 32px;
+z-index: 200;
+pointer-events: none;
+opacity: 0;
+}
+
+.pixel-overlay.out {
+animation: pixelOut 0.6s steps(5) forwards;
+}
+.pixel-overlay.in {
+animation: pixelIn 0.6s steps(5) forwards;
+}
+
+@keyframes pixelOut {
+0% { opacity: 0; transform: scale(1); }
+100% { opacity: 1; transform: scale(1); }
+}
+@keyframes pixelIn {
+0% { opacity: 1; }
+100% { opacity: 0; }
+}
+
+.confirm-flash {
+position: fixed;
+inset: 0;
+background: var(--white);
+opacity: 0;
+pointer-events: none;
+z-index: 999;
+}
+
+/* ============================================
+PAUSE / OPTIONS (pixel UI)
+============================================ */
+.pause-overlay {
+position: fixed;
+inset: 0;
+z-index: 400;
+display: none;
+align-items: center;
+justify-content: center;
+background: rgba(8, 8, 12, 0.72);
+backdrop-filter: blur(3px);
+-webkit-backdrop-filter: blur(3px);
+}
+.pause-overlay.active { display: flex; }
+
+.pause-panel {
+width: min(340px, 88vw);
+background: #121216;
+border: 3px solid #e8e8e8;
+box-shadow:
+0 0 0 2px #0b0b0d,
+6px 6px 0 #000,
+inset 0 0 0 1px #2a2a30;
+padding: 28px 24px 22px;
+image-rendering: pixelated;
+text-align: center;
+position: relative;
+}
+.pause-panel::before {
+content: "";
+position: absolute;
+inset: 6px;
+border: 1px solid rgba(255,255,255,0.08);
+pointer-events: none;
+}
+
+.pause-title {
+font-family: 'Dead Kansas', 'Oswald', sans-serif;
+font-size: 36px;
+letter-spacing: 4px;
+text-transform: uppercase;
+color: #f2f2f2;
+margin-bottom: 22px;
+text-shadow: 3px 3px 0 #000;
+}
+
+.pause-btn {
+display: block;
+width: 100%;
+margin: 0 auto 10px;
+font-family: 'Oswald', sans-serif;
+font-weight: 600;
+font-size: 16px;
+letter-spacing: 4px;
+text-transform: uppercase;
+padding: 12px 16px;
+color: #f2f2f2;
+background: #1a1a20;
+border: 2px solid #cfcfcf;
+cursor: pointer;
+transition: background .12s ease, color .12s ease, transform .08s ease;
+clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+.pause-btn:hover, .pause-btn:focus-visible {
+background: #f2f2f2;
+color: #0b0b0d;
+outline: none;
+}
+.pause-btn:active { transform: translateY(1px); }
+
+.pause-panel.hidden { display: none; }
+
+.options-row {
+display: flex;
+flex-direction: column;
+align-items: stretch;
+gap: 8px;
+margin-bottom: 18px;
+text-align: left;
+}
+.options-label {
+font-family: 'Oswald', sans-serif;
+font-size: 13px;
+letter-spacing: 3px;
+text-transform: uppercase;
+color: #9a9aa2;
+}
+.volume-slider {
+-webkit-appearance: none;
+appearance: none;
+width: 100%;
+height: 10px;
+background: #2a2a32;
+border: 2px solid #555;
+outline: none;
+cursor: pointer;
+}
+.volume-slider::-webkit-slider-thumb {
+-webkit-appearance: none;
+appearance: none;
+width: 18px;
+height: 18px;
+background: #f2f2f2;
+border: 2px solid #111;
+cursor: pointer;
+}
+.volume-slider::-moz-range-thumb {
+width: 18px;
+height: 18px;
+background: #f2f2f2;
+border: 2px solid #111;
+cursor: pointer;
+}
+.volume-value {
+font-family: 'Oswald', sans-serif;
+font-size: 12px;
+letter-spacing: 2px;
+color: #cfcfcf;
+text-align: right;
+}
+
+/* Hitbox debug overlay and custom options toggle */
+#hitboxCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 30;
+  pointer-events: none;
+}
+.hitbox-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: -7px 0 18px;
+  padding: 11px 13px;
+  background: #17171d;
+  border: 1px solid #45454f;
+  color: #e8e8ec;
+  font-family: 'Oswald', sans-serif;
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+}
+.hitbox-toggle-row input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 42px;
+  height: 23px;
+  flex: 0 0 42px;
+  margin: 0;
+  position: relative;
+  background: #34343d;
+  border: 2px solid #777782;
+  cursor: pointer;
+  transition: background .12s ease, border-color .12s ease;
+}
+.hitbox-toggle-row input::after {
+  content: '';
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  top: 3px;
+  left: 3px;
+  background: #d7d7dc;
+  transition: transform .12s ease, background .12s ease;
+}
+.hitbox-toggle-row input:checked {
+  background: #245b35;
+  border-color: #61d982;
+}
+.hitbox-toggle-row input:checked::after {
+  transform: translateX(19px);
+  background: #ffffff;
+}
+.hitbox-toggle-row input:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+.env-prop {
+position: absolute;
+object-fit: contain;
+image-rendering: pixelated;
+image-rendering: crisp-edges;
+z-index: 3;
+pointer-events: none;
+filter: drop-shadow(2px 3px 0 rgba(0,0,0,.35));
+}
+
+@media (max-width: 900px) {
+#select { flex-direction: column; overflow-y: auto; }
+.roster { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 20px; }
+.grid { grid-template-columns: repeat(6, 1fr); }
+.preview { padding: 20px; height: auto; }
+.big-char { width: 60%; height: 320px; }
+.char-name { font-size: 30px; }
+.home-title::before, .home-title::after { width: 10vw; }
+.slam-text { font-size: 40px; right: 5%; top: 5%; }
+.player-wrapper, .zombie-wrapper { width: 100px; height: 100px; }
+}
+
+/* Slightly dim the whole daytime scene; night adds its stronger tint above it. */
+#game { background: #514637; }
+.dirt-field {
+  background-color: #514637;
+  background-image: url("environment/background_1.png");
+  background-repeat: repeat;
+  background-size: auto;
+  image-rendering: pixelated;
+}
+.day-night-overlay {
+  background: rgba(0, 0, 0, 0.17);
+  opacity: 1;
+}
+.day-night-overlay.night {
+  background: rgba(5, 8, 22, 0.58);
+  opacity: 1;
+}
+.coin-hud {
+  position: absolute;
+  top: 62px;
+  right: 26px;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  background: rgba(9, 9, 11, .78);
+  border: 2px solid rgba(255,255,255,.72);
+  box-shadow: 3px 3px 0 rgba(0,0,0,.6);
+  color: #fff;
+  font-family: 'Dead Kansas', 'Oswald', sans-serif;
+  font-size: 21px;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 0 #000;
+  opacity: 0;
+  transform: translateY(-5px);
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+.coin-hud.visible { opacity: 1; transform: translateY(0); }
+.coin-hud img { width: 28px; height: 28px; object-fit: contain; image-rendering: pixelated; }
+
+.radiation-hud {
+  position:absolute; left:26px; top:22px; z-index:85;
+  display:flex; align-items:center; gap:7px;
+  color:#fff; font:600 16px 'Oswald',sans-serif;
+  letter-spacing:1px; text-shadow:1px 1px 0 #000; pointer-events:none;
+}
+.radiation-hud img { width:27px; height:27px; object-fit:contain; image-rendering:pixelated; }
+.radiation-hud.danger { color:#ff4949; animation:radPulse .28s steps(2,end) infinite; }
+@keyframes radPulse { 50% { filter:brightness(1.6); transform:translate(-1px,1px); } }
+
+/* Small, borderless active-effect list. Each timed boost gets its own row. */
+#boostHud {
+  position:absolute; left:24px; bottom:24px; z-index:75;
+  display:flex; flex-direction:column; align-items:flex-start; gap:4px;
+  pointer-events:auto;
+}
+.boost-hud-item {
+  position:relative; display:flex; align-items:center; gap:6px;
+  min-height:24px; color:#fff; font:500 13px 'Oswald',sans-serif;
+  letter-spacing:.5px; text-shadow:1px 1px 0 #000;
+  cursor:help;
+}
+.boost-hud-item img {
+  width:22px; height:22px; object-fit:contain;
+  image-rendering:pixelated; image-rendering:crisp-edges;
+}
+.boost-hud-item.adrenaline-boost img { width:22px; height:22px; }
+.boost-hud-item::after {
+  content:attr(data-tooltip); position:absolute; left:28px; bottom:calc(100% + 5px);
+  width:max-content; max-width:210px; padding:5px 8px;
+  color:#fff; background:rgba(8,8,10,.94); border:1px solid rgba(255,255,255,.35);
+  font:12px 'Oswald',sans-serif; letter-spacing:.3px; white-space:normal;
+  opacity:0; visibility:hidden; transform:translateY(3px);
+  transition:opacity .12s ease, transform .12s ease, visibility .12s ease;
+  pointer-events:none; z-index:2;
+}
+.boost-hud-item:hover::after { opacity:1; visibility:visible; transform:translateY(0); }
+.adrenaline-overlay {
+  position:absolute; inset:0; z-index:410; pointer-events:none; opacity:0;
+  background:radial-gradient(ellipse at center, rgba(80,255,90,0) 48%, rgba(55,220,75,.10) 72%, rgba(35,190,55,.28) 100%);
+  transition:opacity .2s ease;
+}
+#game.adrenaline-active .adrenaline-overlay { opacity:1; }
+#game.adrenaline-active .player-wrapper { filter: drop-shadow(0 0 5px rgba(100,255,110,.28)); }
+.radiation-overlay {
+  position:absolute; inset:0; z-index:420; pointer-events:none; opacity:0;
+  background:rgba(35,255,35,0); mix-blend-mode:screen;
+}
+.radiation-overlay.active { animation: radiationVision 3.4s steps(8,end) forwards; }
+@keyframes radiationVision {
+  0% { opacity:0; background:rgba(30,255,30,0); }
+  20% { opacity:.22; background:rgba(30,255,30,.35); }
+  48% { opacity:.42; background:rgba(30,255,30,.55); }
+  78% { opacity:.72; background:rgba(30,255,30,.78); }
+  100% { opacity:1; background:rgba(30,255,30,.96); }
+}
+#game.radiation-shake { animation: radiationShake .11s steps(2,end) infinite; filter:hue-rotate(65deg) saturate(1.65); }
+@keyframes radiationShake {
+  0% { transform:translate(0,0) rotate(0); }
+  25% { transform:translate(-5px,3px) rotate(-.25deg); }
+  50% { transform:translate(5px,-3px) rotate(.25deg); }
+  75% { transform:translate(-3px,-4px) rotate(-.2deg); }
+  100% { transform:translate(0,0) rotate(0); }
+}
+.nuclear-puddle {
+  position:absolute; z-index:2; height:auto; object-fit:contain;
+  image-rendering:pixelated; pointer-events:none; opacity:.94;
+  filter:drop-shadow(0 0 9px rgba(55,255,35,.34));
+}
+.round-shop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 350;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(5, 5, 7, .84);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .25s ease, visibility .25s ease;
+}
+.round-shop-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
+.round-shop-panel {
+  width: min(1000px, 96vw);
+  max-height: 94vh;
+  overflow: auto;
+  padding: clamp(18px, 3vw, 32px);
+  background: linear-gradient(180deg, #202026, #101014);
+  border: 3px solid #d7d7d7;
+  box-shadow: 0 0 0 4px #070709, 9px 9px 0 rgba(0,0,0,.75), inset 0 0 0 2px #36363d;
+  position: relative;
+}
+.round-shop-panel::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(255,255,255,.1);
+  pointer-events: none;
+}
+.round-shop-top { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+.round-shop-heading {
+  font-family:'Dead Kansas','Oswald',sans-serif;
+  font-size:clamp(30px,5vw,48px);
+  letter-spacing:4px;
+  text-transform:uppercase;
+  text-shadow:4px 4px 0 #000;
+}
+.round-shop-wallet {
+  display:flex; align-items:center; gap:9px; padding:8px 12px;
+  border:2px solid #b7a35c; background:#111114;
+  font-family:'Dead Kansas','Oswald',sans-serif; font-size:23px; letter-spacing:2px;
+}
+.round-shop-wallet img { width:30px; height:30px; object-fit:contain; image-rendering:pixelated; }
+.round-shop-subtitle { margin:8px 0 22px; color:#aaaab2; font-size:13px; letter-spacing:4px; text-transform:uppercase; }
+.round-shop-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; }
+.shop-card {
+  min-width:0; min-height:330px; display:flex; flex-direction:column; align-items:center;
+  padding:17px 13px 14px; text-align:center; background:#18181e;
+  border:2px solid #56565e; box-shadow:4px 4px 0 #080809;
+}
+.shop-card-image-wrap {
+  width:100%; height:126px; display:flex; align-items:center; justify-content:center;
+  margin-bottom:10px; background:linear-gradient(135deg,rgba(255,255,255,.045),transparent);
+  border-bottom:1px solid #393940;
+}
+.shop-card-image {
+  max-width:86%; max-height:112px; width:auto; height:auto; object-fit:contain;
+  image-rendering:pixelated; image-rendering:crisp-edges; filter:drop-shadow(3px 4px 0 rgba(0,0,0,.55));
+}
+.shop-card-title {
+  min-height:32px; font-family:'Dead Kansas','Oswald',sans-serif; font-size:22px;
+  letter-spacing:1.5px; text-transform:uppercase; color:#f3f0e8;
+}
+.shop-card-description { min-height:48px; margin:7px 0 14px; color:#b8b8bf; font-size:13px; line-height:1.45; letter-spacing:.4px; }
+.shop-buy-btn {
+  width:100%; margin-top:auto; display:flex; align-items:center; justify-content:center; gap:8px;
+  min-height:42px; border:2px solid #d8d8d8; background:#292930; color:#fff;
+  font-family:'Dead Kansas','Oswald',sans-serif; font-size:17px; letter-spacing:1.5px;
+  cursor:pointer; transition:background .12s ease, color .12s ease, transform .1s ease;
+}
+.shop-buy-btn:hover:not(:disabled), .shop-buy-btn:focus-visible { background:#e8e4d9; color:#111; outline:none; }
+.shop-buy-btn:active:not(:disabled) { transform:translateY(2px); }
+.shop-buy-btn img { width:22px; height:22px; object-fit:contain; image-rendering:pixelated; }
+.shop-buy-btn:disabled { cursor:default; opacity:.65; }
+.shop-buy-btn.sold { background:#111; color:#aaa; border-color:#555; letter-spacing:3px; }
+.round-shop-next {
+  display:block; margin:24px 0 0 auto; min-width:150px; padding:12px 26px;
+  border:2px solid #f1f1f1; background:#e8e8e8; color:#111;
+  font-family:'Dead Kansas','Oswald',sans-serif; font-size:22px; letter-spacing:4px;
+  text-transform:uppercase; cursor:pointer; box-shadow:4px 4px 0 #000;
+}
+.round-shop-next:hover { background:#c7b978; }
+@media (max-width:700px) {
+  .round-shop-overlay { padding:8px; }
+  .round-shop-panel { padding:16px 12px; }
+  .round-shop-cards { gap:7px; }
+  .shop-card { min-height:300px; padding:10px 7px; }
+  .shop-card-image-wrap { height:90px; }
+  .shop-card-image { max-height:78px; max-width:95%; }
+  .shop-card-title { font-size:16px; min-height:38px; }
+  .shop-card-description { font-size:11px; min-height:62px; }
+  .shop-buy-btn { font-size:13px; gap:4px; }
+}
+
+</style>
+</head>
+<body>
+
+<section id="home" class="screen active">
+<div class="scanlines"></div>
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+
+<div class="home-inner">
+<h1 class="home-title">Apocalypse</h1>
+<button class="play-btn" id="playBtn">Play</button>
+</div>
+</section>
+
+<section id="select" class="screen">
+<div class="roster">
+<div class="grid" id="tileGrid"></div>
+</div>
+
+<div class="preview">
+<div class="stage">
+<div class="floor"></div>
+<div class="big-char" id="bigChar">
+<div class="slam-text" id="slamText">Selected</div>
+</div>
+</div>
+
+<div class="info">
+<h2 class="char-name" id="charName">—</h2>
+<div class="char-style" id="charStyle">—</div>
+
+<div class="traits">
+<div class="traits-col buff">
+<h4>Advantages</h4>
+<ul id="charBuffs"></ul>
+</div>
+<div class="traits-col nerf">
+<h4>Drawbacks</h4>
+<ul id="charNerfs"></ul>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="game" class="screen">
+<div class="dirt-field" id="dirtField"></div>
+<div class="grass left"></div>
+<div class="grass right"></div>
+<div class="day-night-overlay" id="dayNightOverlay"></div>
+<div id="envContainer"></div>
+
+<div id="zombieContainer"></div>
+<div id="itemContainer"></div>
+<canvas id="hitboxCanvas" aria-hidden="true"></canvas>
+<div id="bloodContainer"></div>
+<div class="wave-display" id="waveDisplay">Wave: 1</div>
+<div class="time-indicator" id="timeIndicator">Day</div>
+<div class="coin-hud" id="coinHud"><img src="items/coins.png" alt="Coins"><span id="coinHudCount">0</span></div>
+<div class="radiation-hud" id="radiationHud"><img src="items/nuclear_symbol.png" alt="Radiation"><span id="radiationPercent">0%</span></div>
+<div id="boostHud" aria-label="Active boosts"></div>
+<div class="adrenaline-overlay" id="adrenalineOverlay"></div>
+<div class="radiation-overlay" id="radiationOverlay"></div>
+<div class="heal-flash" id="healFlash"></div>
+
+<div class="player-wrapper" id="playerWrapper">
+<img class="sprite" id="playerSprite" src="" alt="Player">
+</div>
+
+<div class="health-bar-container">
+<div class="health-bar-fill" id="healthFill"></div>
+<div class="health-text" id="healthText">100/100</div>
+</div>
+</section>
+
+<div class="round-shop-overlay" id="roundShopOverlay" aria-hidden="true">
+  <div class="round-shop-panel">
+    <div class="round-shop-top">
+      <div class="round-shop-heading">Round Shop</div>
+      <div class="round-shop-wallet"><img src="items/coins.png" alt=""><span id="shopCoinCount">0</span></div>
+    </div>
+    <div class="round-shop-subtitle" id="shopSubtitle">Choose your supplies</div>
+    <div class="round-shop-cards" id="roundShopCards"></div>
+    <button class="round-shop-next" id="roundShopNext">Skip</button>
+  </div>
+</div>
+
+<div class="death-overlay" id="deathOverlay">
+<div class="death-content">
+<div class="death-stamp">Died</div>
+<div class="death-kills" id="deathKills">Zombies killed: 0</div>
+<div class="death-reason" id="deathReason">Mauled by a zombie.</div>
+</div>
+<div class="death-retry">Press space to try again</div>
+</div>
+
+<!-- PAUSE MENU -->
+<div class="pause-overlay" id="pauseOverlay">
+<div class="pause-panel" id="pauseMainPanel">
+<div class="pause-title">Paused</div>
+<button class="pause-btn" id="btnResume">Resume</button>
+<button class="pause-btn" id="btnOptions">Options</button>
+<button class="pause-btn" id="btnQuit">Quit</button>
+</div>
+<div class="pause-panel hidden" id="pauseOptionsPanel">
+<div class="pause-title">Options</div>
+<div class="options-row">
+<div class="options-label">Master Volume</div>
+<input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="100">
+<div class="volume-value" id="volumeValue">100%</div>
+</div>
+<label class="hitbox-toggle-row" for="hitboxToggle">
+<span>Hitboxs</span><input type="checkbox" id="hitboxToggle">
+</label>
+<button class="pause-btn" id="btnOptionsBack">Back</button>
+</div>
+</div>
+
+<div class="pixel-overlay" id="pixelOverlay"></div>
+<div class="confirm-flash" id="flash"></div>
+
+<script>
+let PLAYER_IDLE = "ash/character_1_idle.png";
+const footstepsAudio = new Audio("sounds/footsteps.mp3");
+footstepsAudio.loop = true;
+footstepsAudio.volume = 0.18;
+footstepsAudio.preload = "auto";
+
+const coinPickupAudio = new Audio("sounds/coin_pick_up.mp3");
+coinPickupAudio.volume = 0.45;
+coinPickupAudio.preload = "auto";
+
+const glockShotAudio = new Audio("sounds/glock_gunshot.mp3");
+const radiationAudio = new Audio("sounds/gamma_radiation.mp3");
+radiationAudio.loop = true;
+radiationAudio.volume = 0.34;
+radiationAudio.preload = "auto";
+glockShotAudio.preload = "auto";
+
+// One shared ambience track for nearby zombies (never create/restart per zombie).
+const zombieGroansAudio = new Audio("sounds/zombie_groans.mp3");
+zombieGroansAudio.loop = true;
+zombieGroansAudio.volume = 0.16;
+zombieGroansAudio.preload = "auto";
+
+// Quiet background music. It runs continuously across every screen and game state.
+const homeMusicAudio = new Audio("sounds/background_music_1.mp3");
+homeMusicAudio.loop = true;
+homeMusicAudio.volume = 0.075;
+homeMusicAudio.preload = "auto";
+
+// Master volume (0–1). Base volumes are scaled by this.
+let masterVolume = 1;
+const BASE_FOOTSTEPS_VOL = 0.18;
+const BASE_COIN_VOL = 0.45;
+const BASE_GLOCK_VOL = 0.6;
+const BASE_ZOMBIE_GROANS_VOL = 0.16;
+const BASE_HOME_MUSIC_VOL = 0.075;
+function applyMasterVolume() {
+footstepsAudio.volume = BASE_FOOTSTEPS_VOL * masterVolume;
+coinPickupAudio.volume = BASE_COIN_VOL * masterVolume;
+glockShotAudio.volume = BASE_GLOCK_VOL * masterVolume;
+radiationAudio.volume = 0.34 * masterVolume;
+zombieGroansAudio.volume = BASE_ZOMBIE_GROANS_VOL * masterVolume;
+homeMusicAudio.volume = BASE_HOME_MUSIC_VOL * masterVolume;
+}
+applyMasterVolume();
+
+// Four-frame walking cycle: 1 → 2 → 3 → 4 → repeat.
+const PLAYER_WALK = [
+"ash/character_1_1.png",
+"ash/character_1_2.png",
+"ash/character_1_3.png",
+"ash/character_1_4.png"
+];
+
+const PLAYER_STAB = [
+"ash/stab_anim/stab_anim_1.png",
+"ash/stab_anim/stab_anim_2.png"
+];
+
+const ZOMBIE_IDLE = "zombie/zombie_1_idle.png";
+// Four-frame zombie walking cycle: 1 → 2 → 3 → 4 → repeat.
+const ZOMBIE_FRAMES = [
+"zombie/zombie_1_1.png",
+"zombie/zombie_1_2.png",
+"zombie/zombie_1_3.png",
+"zombie/zombie_1_4.png"
+];
+
+[...PLAYER_WALK, PLAYER_IDLE, ...PLAYER_STAB, ZOMBIE_IDLE, ...ZOMBIE_FRAMES, "environment/broken_down_car.png", "items/bandages.png", "items/medkit.png", "items/coins.png", "items/nuclear_symbol.png", "environment/nuclear_puddles.png", "zombie/zombie_1_idle.png"].forEach(src => {
+const img = new Image();
+img.src = src;
+});
+
+// Sprites that failed to load (e.g. a character with no reload art yet) so we can fall back safely.
+const missingSprites = new Set();
+const RELOAD_FRAME_COUNT = 6;
+
+function characterSprites(folder, num, idleIsGunIdle = false, walkFrames = 4) {
+const idle = `${folder}/character_${num}_idle.png`;
+const reload = Array.from({ length: RELOAD_FRAME_COUNT }, (_, i) => `${folder}/gun_anims/reload_${i + 1}.png`);
+reload.forEach(src => {
+const img = new Image();
+img.onerror = () => missingSprites.add(src);
+img.src = src;
+});
+return {
+idle,
+reload,
+walk: Array.from({ length: walkFrames }, (_, i) => i + 1).map(i => `${folder}/character_${num}_${i}.png`),
+stab: [1, 2].map(i => `${folder}/stab_anim/stab_anim_${i}.png`),
+// Characters who start with a gun use their normal idle as the gun idle (no separate "with gun" folder).
+gunIdle: idleIsGunIdle ? idle : `${folder}/${folder} with gun/character_${num}_gun_idle.png`
+};
+}
+
+const ROSTER = [
+{
+name: "ASH",
+style: "Balanced",
+sprites: characterSprites("ash", 1),
+stats: {
+speedMult: 1.015, // 1.5% faster than normal
+meleeMult: 1.5, // melee does 1.5x damage
+damageTakenMult: 1.5, // takes 1.5x damage from zombies
+maxHealth: 100,
+zombieSpeedMult: 1,
+startsWithGun: false,
+infiniteAmmo: false
+},
+buffs: [
+"1.5% faster than normal",
+"Melee attacks do 1.5x more damage"
+],
+nerfs: [
+"Only has a knife",
+"Takes 1.5x more damage from zombies"
+]
+},
+{
+name: "GURT",
+style: "Survivalist",
+sprites: characterSprites("gurt", 2, true, 3),
+stats: {
+speedMult: 1,
+meleeMult: 1,
+damageTakenMult: 1,
+maxHealth: 80,
+zombieSpeedMult: 1.25, // zombies are faster even in the day (night bonus still stacks on top)
+startsWithGun: true,
+infiniteAmmo: true
+},
+buffs: [
+"Starts with a Glock",
+"Infinite ammo for all pistols"
+],
+nerfs: [
+"Zombies are faster, even in the day",
+"80 health instead of 100"
+]
+}
+];
+ROSTER.forEach(c => { c.img = c.sprites.idle; });
+
+const homeEl = document.getElementById('home');
+const selectEl = document.getElementById('select');
+const gameEl = document.getElementById('game');
+const playBtn = document.getElementById('playBtn');
+
+function syncHomeMusic() {
+  // Background music is global: never pause or rewind it when screens change.
+  if (homeMusicAudio.paused) homeMusicAudio.play().catch(() => {});
+}
+
+// Browsers can block autoplay until the first user gesture. Retry on common
+// interactions and whenever the page becomes active; once started, loop forever.
+let zombieGroansAudioUnlocked = false;
+function unlockZombieGroansAudio() {
+  if (zombieGroansAudioUnlocked) return;
+  // Browsers require a user gesture before an audio element can play.
+  const wasPaused = zombieGroansAudio.paused;
+  zombieGroansAudio.play().then(() => {
+    zombieGroansAudioUnlocked = true;
+    if (wasPaused && !zombieGroansAudio.paused) {
+      zombieGroansAudio.pause();
+      zombieGroansAudio.currentTime = 0;
+    }
+  }).catch(() => {});
+}
+document.addEventListener('pointerdown', () => { syncHomeMusic(); unlockZombieGroansAudio(); });
+document.addEventListener('keydown', () => { syncHomeMusic(); unlockZombieGroansAudio(); });
+window.addEventListener('focus', syncHomeMusic);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) syncHomeMusic();
+});
+setTimeout(syncHomeMusic, 0);
+
+const tileGrid = document.getElementById('tileGrid');
+const flash = document.getElementById('flash');
+
+const charNameEl = document.getElementById('charName');
+const charStyleEl = document.getElementById('charStyle');
+const charBuffsEl = document.getElementById('charBuffs');
+const charNerfsEl = document.getElementById('charNerfs');
+const bigChar = document.getElementById('bigChar');
+const slamText = document.getElementById('slamText');
+
+const playerWrapper = document.getElementById('playerWrapper');
+const playerSprite = document.getElementById('playerSprite');
+const pixelOverlay = document.getElementById('pixelOverlay');
+const dirtField = document.getElementById('dirtField');
+const zombieContainer = document.getElementById('zombieContainer');
+const itemContainer = document.getElementById('itemContainer');
+const bloodContainer = document.getElementById('bloodContainer');
+const waveDisplay = document.getElementById('waveDisplay');
+const healFlash = document.getElementById('healFlash');
+
+const healthFill = document.getElementById('healthFill');
+const healthText = document.getElementById('healthText');
+const deathOverlay = document.getElementById('deathOverlay');
+const deathKills = document.getElementById('deathKills');
+const deathReason = document.getElementById('deathReason');
+const dayNightOverlay = document.getElementById('dayNightOverlay');
+const timeIndicator = document.getElementById('timeIndicator');
+const coinHud = document.getElementById('coinHud');
+const coinHudCount = document.getElementById('coinHudCount');
+const radiationHud = document.getElementById('radiationHud');
+const radiationPercent = document.getElementById('radiationPercent');
+const boostHud = document.getElementById('boostHud');
+const radiationOverlay = document.getElementById('radiationOverlay');
+const roundShopOverlay = document.getElementById('roundShopOverlay');
+const roundShopCards = document.getElementById('roundShopCards');
+const shopCoinCount = document.getElementById('shopCoinCount');
+const roundShopNext = document.getElementById('roundShopNext');
+const shopSubtitle = document.getElementById('shopSubtitle');
+const envContainer = document.getElementById('envContainer');
+const pauseOverlay = document.getElementById('pauseOverlay');
+const pauseMainPanel = document.getElementById('pauseMainPanel');
+const pauseOptionsPanel = document.getElementById('pauseOptionsPanel');
+const btnResume = document.getElementById('btnResume');
+const btnOptions = document.getElementById('btnOptions');
+const btnQuit = document.getElementById('btnQuit');
+const btnOptionsBack = document.getElementById('btnOptionsBack');
+const volumeSlider = document.getElementById('volumeSlider');
+const volumeValue = document.getElementById('volumeValue');
+const hitboxToggle = document.getElementById('hitboxToggle');
+const hitboxCanvas = document.getElementById('hitboxCanvas');
+const hitboxCtx = hitboxCanvas.getContext('2d');
+let showHitboxes = false;
+let debugAttackHitbox = null;
+
+let selectedIndex = 0;
+let inSelect = false;
+let isConfirming = false;
+let isPaused = false;
+
+// Environment props (permanent for the run)
+const envProps = [];
+const environmentCars = [];
+const nuclearPuddles = [];
+let nextCarSpawnWorldX = 0;
+let nextPropSpawnWorldX = 0;
+let nextRadiationChunk = 0;
+let environmentImageSrcs = [];
+
+// Explicit environment asset catalogue. Values are pixel width ranges and relative spawn weights.
+const ENVIRONMENT_ASSETS = [
+{ src: 'environment/barrel_1.png', min: 52, max: 70, weight: 1.0 },
+{ src: 'environment/bin.png', min: 58, max: 78, weight: 0.85 },
+{ src: 'environment/newspapers.png', min: 34, max: 48, weight: 1.15 },
+{ src: 'environment/tire.png', min: 42, max: 58, weight: 0.95 },
+{ src: 'environment/trash_bag_1.png', min: 42, max: 62, weight: 1.0 },
+{ src: 'environment/trash_bag_2.png', min: 44, max: 64, weight: 1.0 },
+{ src: 'environment/barrel_2.png', min: 52, max: 70, weight: 0.9 }
+];
+let environmentImagesReady = false;
+
+ROSTER.forEach((char, i) => {
+const cell = document.createElement('div');
+cell.className = 'cell';
+cell.dataset.index = i;
+cell.innerHTML = char.img ? `<img src="${char.img}" alt="${char.name}">` : '';
+cell.addEventListener('click', () => {
+if (isConfirming) return;
+selectedIndex = i;
+updateSelection();
+});
+cell.addEventListener('dblclick', () => {
+if (isConfirming) return;
+confirmSelection();
+});
+tileGrid.appendChild(cell);
+});
+
+function updateSelection() {
+const char = ROSTER[selectedIndex];
+
+document.querySelectorAll('.cell').forEach((c, i) => {
+c.classList.toggle('selected', i === selectedIndex);
+});
+
+bigChar.classList.add('swap');
+setTimeout(() => bigChar.classList.remove('swap'), 200);
+
+charNameEl.textContent = char.name;
+charStyleEl.textContent = char.style;
+
+const oldImg = bigChar.querySelector('img');
+if (oldImg) oldImg.remove();
+
+if (char.img) {
+const newImg = document.createElement('img');
+newImg.src = char.img;
+newImg.alt = char.name;
+bigChar.insertBefore(newImg, slamText);
+}
+
+charBuffsEl.innerHTML = '';
+char.buffs.forEach(b => {
+const li = document.createElement('li');
+li.textContent = b;
+charBuffsEl.appendChild(li);
+});
+
+charNerfsEl.innerHTML = '';
+char.nerfs.forEach(n => {
+const li = document.createElement('li');
+li.textContent = n;
+charNerfsEl.appendChild(li);
+});
+}
+
+function goToSelect() {
+homeEl.classList.remove('active');
+syncHomeMusic();
+selectEl.classList.add('active');
+inSelect = true;
+selectedIndex = 0;
+updateSelection();
+}
+
+playBtn.addEventListener('click', goToSelect);
+
+/* ==========================================================
+ENVIRONMENT PROPS (permanent per run)
+========================================================== */
+function tryLoadImage(src) {
+return new Promise((resolve) => {
+const img = new Image();
+img.onload = () => resolve(src);
+img.onerror = () => resolve(null);
+img.src = src;
+});
+}
+
+async function discoverEnvironmentImages() {
+// Load the exact filenames supplied in the environment asset folder.
+const results = await Promise.all(ENVIRONMENT_ASSETS.map(async asset => {
+const loaded = await tryLoadImage(asset.src);
+return loaded ? asset : null;
+}));
+environmentImageSrcs = results.filter(Boolean);
+environmentImagesReady = true;
+return environmentImageSrcs;
+}
+discoverEnvironmentImages();
+
+function weightedEnvironmentAsset() {
+const total = environmentImageSrcs.reduce((sum, asset) => sum + asset.weight, 0);
+let roll = Math.random() * total;
+for (const asset of environmentImageSrcs) {
+roll -= asset.weight;
+if (roll <= 0) return asset;
+}
+return environmentImageSrcs[environmentImageSrcs.length - 1];
+}
+
+function spawnBrokenDownCar(worldX) {
+const el = document.createElement('img');
+el.className = 'env-prop env-car';
+el.src = 'environment/broken_down_car.png';
+el.alt = 'Broken-down car';
+el.draggable = false;
+const width = Math.min(310, Math.max(230, window.innerWidth * 0.205));
+const height = width * 0.46; // approximate visible car silhouette for collision
+el.style.width = `${width}px`;
+el.style.height = 'auto';
+
+// Keep cars in the playable area and avoid spawning directly on the player.
+const yMin = 100;
+const yMax = Math.max(yMin, window.innerHeight - height - 170);
+let y = yMin + Math.random() * (yMax - yMin);
+const playerBox = getPlayerHitbox();
+if (worldX < playerBox.x + 260 && worldX + width > playerBox.x - 260 &&
+y < playerBox.y + playerBox.h + 50 && y + height > playerBox.y - 50) {
+y = y > window.innerHeight * 0.5 ? yMin : yMax;
+}
+el.style.left = `${worldX - worldOffset}px`;
+el.style.top = `${y}px`;
+el.style.opacity = '1';
+el.style.zIndex = y > window.innerHeight * 0.55 ? '7' : '4';
+envContainer.appendChild(el);
+environmentCars.push({ x: worldX, y, w: width, h: height, el });
+}
+
+function scheduleNextCarSpawn(fromWorldX) {
+// Cars are landmarks, not clutter: roughly one every 3–4 screens.
+nextCarSpawnWorldX = fromWorldX + window.innerWidth * (3 + Math.random());
+}
+
+// Environment props are scattered independently across the world.
+// Keep the count low and enforce minimum spacing so objects feel naturally
+// abandoned rather than arranged in piles or obvious decorative clusters.
+function pickEnvironmentY(size) {
+const marginTop = 105;
+const marginBottom = 155;
+const usable = Math.max(120, window.innerHeight - marginTop - marginBottom - size);
+return marginTop + Math.random() * usable;
+}
+
+function spawnEnvironmentBatch(startWorldX, worldSpan, count) {
+if (!environmentImageSrcs.length) return;
+
+const playerWorldX = player.x + worldOffset;
+const placedThisBatch = [];
+const minSpacing = 205;
+
+for (let i = 0; i < count; i++) {
+const asset = weightedEnvironmentAsset();
+if (!asset) continue;
+
+const size = Math.round(asset.min + Math.random() * (asset.max - asset.min));
+let x = startWorldX;
+let y = pickEnvironmentY(size);
+let valid = false;
+
+// Give each object its own patch of ground, with enough separation from
+// existing props to avoid accidental piles. Positions still vary per run.
+for (let attempt = 0; attempt < 28; attempt++) {
+x = startWorldX + 70 + Math.random() * Math.max(1, worldSpan - 140);
+y = pickEnvironmentY(size);
+
+const tooCloseToPlayer =
+Math.abs(x - playerWorldX) < 250 &&
+Math.abs(y - (player.y + 70)) < 210;
+
+const tooCloseToAnother = [...envProps, ...placedThisBatch].some(prop => {
+const dx = x - prop.x;
+const dy = y - prop.y;
+return Math.hypot(dx, dy) < minSpacing;
+});
+
+if (!tooCloseToPlayer && !tooCloseToAnother) {
+valid = true;
+break;
+}
+}
+
+if (!valid) continue;
+
+const el = document.createElement('img');
+el.className = 'env-prop';
+el.src = asset.src;
+el.draggable = false;
+el.alt = '';
+el.style.width = `${size}px`;
+el.style.height = 'auto';
+el.style.left = `${x - worldOffset}px`;
+el.style.top = `${y}px`;
+el.style.opacity = String(0.86 + Math.random() * 0.14);
+el.style.zIndex = y > window.innerHeight * 0.55 ? '6' : '3';
+
+envContainer.appendChild(el);
+const prop = { x, y, el, size };
+envProps.push(prop);
+placedThisBatch.push(prop);
+}
+}
+
+
+// Each loaded world chunk (one screen-width) gets one independent 70% radiation-puddle roll.
+function rollRadiationChunk(idx) {
+  if (Math.random() >= 0.70) return;
+  const chunkWidth = window.innerWidth;
+  const x = idx * chunkWidth + 100 + Math.random() * Math.max(80, chunkWidth - 300);
+  spawnNuclearPuddle(x);
+}
+
+function spawnNuclearPuddle(worldX) {
+  const width = 175 + Math.random() * 85;
+  const height = width * (1024 / 1536);
+  const y = 75 + Math.random() * Math.max(100, window.innerHeight - height - 180);
+  const el = document.createElement('img');
+  el.className = 'nuclear-puddle';
+  el.src = 'environment/nuclear_puddles.png';
+  el.alt = 'Nuclear waste puddle';
+  el.draggable = false;
+  el.style.width = `${width}px`;
+  el.style.left = `${worldX - worldOffset}px`;
+  el.style.top = `${y}px`;
+  envContainer.appendChild(el);
+  nuclearPuddles.push({ x: worldX, y, w: width, h: height, el });
+}
+
+function updateNuclearPuddles(dt) {
+  const pBox = getPlayerHitbox();
+  const playerCenterX = pBox.x + pBox.w / 2;
+  const playerCenterY = pBox.y + pBox.h / 2;
+  let puddleVisible = false;
+  for (let i = nuclearPuddles.length - 1; i >= 0; i--) {
+    const puddle = nuclearPuddles[i];
+    const sx = puddle.x - worldOffset;
+    puddle.el.style.left = `${sx}px`;
+    if (sx + puddle.w < -350) {
+      puddle.el.remove();
+      nuclearPuddles.splice(i, 1);
+      continue;
+    }
+    if (sx < window.innerWidth && sx + puddle.w > 0 &&
+        puddle.y < window.innerHeight && puddle.y + puddle.h > 0) puddleVisible = true;
+
+    const cx = puddle.x + puddle.w / 2;
+    const cy = puddle.y + puddle.h / 2;
+    const near = Math.hypot(playerCenterX - cx, playerCenterY - cy) < 275;
+    const touching = aabbOverlap(pBox, {
+      x: puddle.x + puddle.w * .12, y: puddle.y + puddle.h * .22,
+      w: puddle.w * .76, h: puddle.h * .56
+    });
+    if (near && !player.dead && !radiationDeathStarted) {
+      radiationLevel = Math.min(100, radiationLevel + dt * (touching ? 17 : 2.8));
+    }
+  }
+  if (puddleVisible && !player.dead) {
+    if (radiationAudio.paused) radiationAudio.play().catch(() => {});
+  } else if (!radiationAudio.paused) {
+    radiationAudio.pause();
+    radiationAudio.currentTime = 0;
+  }
+  radiationPercent.textContent = `${Math.floor(radiationLevel)}%`;
+  radiationHud.classList.toggle('danger', radiationLevel >= 100);
+  if (radiationLevel >= 100 && !radiationDeathStarted) triggerRadiationDeath();
+}
+
+function triggerRadiationDeath() {
+  if (radiationDeathStarted || player.dead) return;
+  radiationDeathStarted = true;
+  radiationLevel = 100;
+  radiationPercent.textContent = '100%';
+  radiationHud.classList.add('danger');
+  radiationAudio.pause();
+  radiationAudio.currentTime = 0;
+  player.isMoving = false;
+  player.isCharging = false;
+  player.isAttacking = false;
+  player.isStabbing = false;
+  Object.keys(keys).forEach(k => keys[k] = false);
+  gameEl.classList.add('radiation-shake');
+  radiationOverlay.classList.remove('active');
+  void radiationOverlay.offsetWidth;
+  radiationOverlay.classList.add('active');
+  // Brief transformation beat, then the full green-out and normal death screen.
+  setTimeout(() => {
+    playerSprite.src = 'zombie/zombie_1_idle.png';
+    playerWrapper.classList.add('face-left');
+  }, 1050);
+  setTimeout(() => {
+    gameEl.classList.remove('radiation-shake');
+    radiationOverlay.style.backgroundColor = 'rgba(35,255,35,.98)';
+  }, 2650);
+  setTimeout(() => {
+    radiationOverlay.classList.remove('active');
+    radiationOverlay.style.opacity = '1';
+    endGame('radiation');
+    setTimeout(() => {
+      radiationOverlay.style.opacity = '0';
+      radiationOverlay.style.backgroundColor = '';
+    }, 450);
+  }, 3550);
+}
+
+function spawnEnvironmentProps() {
+envContainer.innerHTML = '';
+envProps.length = 0;
+environmentCars.length = 0;
+nuclearPuddles.length = 0;
+radiationLevel = 0;
+radiationDeathStarted = false;
+radiationPercent.textContent = "0%";
+radiationHud.classList.remove("danger");
+radiationOverlay.classList.remove("active");
+radiationOverlay.style.opacity = "0";
+radiationAudio.pause();
+radiationAudio.currentTime = 0;
+const playerWorldX = player.x + worldOffset;
+scheduleNextCarSpawn(playerWorldX);
+// A handful of separate props across the opening stretch.
+const worldSpan = Math.max(2200, window.innerWidth * 2.6);
+spawnEnvironmentBatch(playerWorldX + 120, worldSpan, 5);
+// Roll once for the currently loaded chunk and the next chunk entering view.
+nextRadiationChunk = Math.max(0, Math.floor(playerWorldX / Math.max(1, window.innerWidth)));
+while (nextRadiationChunk * window.innerWidth <= playerWorldX + window.innerWidth) {
+  rollRadiationChunk(nextRadiationChunk++);
+}
+nextPropSpawnWorldX = playerWorldX + worldSpan * 0.82;
+}
+
+function updateEnvironmentProps() {
+for (const p of envProps) {
+p.el.style.left = `${p.x - worldOffset}px`;
+}
+
+const playerWorldX = player.x + worldOffset;
+// As each screen-width chunk comes into view, make exactly one 70% spawn roll.
+while (nextRadiationChunk * window.innerWidth <= playerWorldX + window.innerWidth) {
+  rollRadiationChunk(nextRadiationChunk++);
+}
+// Add only a few individually scattered props as the player explores.
+if (environmentImagesReady && environmentImageSrcs.length && playerWorldX >= nextPropSpawnWorldX) {
+const span = Math.max(1900, window.innerWidth * 2.0);
+spawnEnvironmentBatch(nextPropSpawnWorldX, span, 3);
+nextPropSpawnWorldX += span * 0.82;
+}
+
+if (playerWorldX >= nextCarSpawnWorldX) {
+spawnBrokenDownCar(playerWorldX + window.innerWidth * 0.85);
+scheduleNextCarSpawn(playerWorldX);
+}
+for (let i = environmentCars.length - 1; i >= 0; i--) {
+const car = environmentCars[i];
+car.el.style.left = `${car.x - worldOffset}px`;
+if (car.x - worldOffset < -600) {
+car.el.remove();
+environmentCars.splice(i, 1);
+}
+}
+for (let i = envProps.length - 1; i >= 0; i--) {
+const prop = envProps[i];
+if (prop.x - worldOffset < -260) {
+prop.el.remove();
+envProps.splice(i, 1);
+}
+}
+}
+
+function getPlayerHitboxAt(worldX, y) {
+return {
+x: worldX + BODY_HIT_OX,
+y: y + BODY_HIT_OY,
+w: BODY_HIT_W,
+h: BODY_HIT_H
+};
+}
+
+function collidesWithEnvironmentCar(worldX, y) {
+const playerBox = getPlayerHitboxAt(worldX, y);
+return environmentCars.some(car => {
+// The car is a side-on sprite. Its solid footprint sits lower in the
+// image than the top edge, so use a shorter, lower collision band.
+// This prevents the player being blocked above the roof and stops them
+// slipping into the visible lower edge of the vehicle.
+const carHitboxY = car.y + car.h * 0.60;
+const carHitboxH = car.h * 0.30;
+const carBox = {
+x: car.x + car.w * 0.08,
+y: carHitboxY,
+w: car.w * 0.84,
+h: carHitboxH
+};
+return aabbOverlap(playerBox, carBox);
+});
+}
+
+/* ==========================================================
+PAUSE / OPTIONS
+========================================================== */
+function showPauseMain() {
+pauseMainPanel.classList.remove('hidden');
+pauseOptionsPanel.classList.add('hidden');
+}
+
+function showPauseOptions() {
+pauseMainPanel.classList.add('hidden');
+pauseOptionsPanel.classList.remove('hidden');
+volumeSlider.value = Math.round(masterVolume * 100);
+volumeValue.textContent = `${volumeSlider.value}%`;
+}
+
+function pauseGame() {
+if (!gameEl.classList.contains('active') || player.dead || isPaused || isRoundShopOpen) return;
+isPaused = true;
+footstepsAudio.pause();
+showPauseMain();
+pauseOverlay.classList.add('active');
+}
+
+function resumeGame() {
+if (!isPaused) return;
+isPaused = false;
+pauseOverlay.classList.remove('active');
+showPauseMain();
+}
+
+function quitGame() {
+isPaused = false;
+pauseOverlay.classList.remove('active');
+showPauseMain();
+footstepsAudio.pause();
+footstepsAudio.currentTime = 0;
+// Prefer closing the tab/window; fall back to title screen
+window.close();
+setTimeout(() => {
+gameEl.classList.remove('active');
+selectEl.classList.remove('active');
+homeEl.classList.add('active');
+inSelect = false;
+deathOverlay.classList.remove('active');
+syncHomeMusic();
+}, 50);
+}
+
+btnResume.addEventListener('click', resumeGame);
+btnOptions.addEventListener('click', showPauseOptions);
+btnOptionsBack.addEventListener('click', showPauseMain);
+btnQuit.addEventListener('click', quitGame);
+
+volumeSlider.addEventListener('input', () => {
+masterVolume = Math.max(0, Math.min(1, Number(volumeSlider.value) / 100));
+volumeValue.textContent = `${volumeSlider.value}%`;
+applyMasterVolume();
+});
+
+// Toggle hitbox drawing immediately, including while paused or in Options.
+hitboxToggle.addEventListener('change', () => {
+  showHitboxes = hitboxToggle.checked;
+  if (showHitboxes) renderHitboxes();
+  else renderHitboxes(); // clears the overlay immediately
+});
+
+document.addEventListener('keydown', (e) => {
+// ESC: pause while playing; unpause from pause/options
+if (e.key === 'Escape') {
+if (gameEl.classList.contains('active') && !player.dead && !isRoundShopOpen) {
+e.preventDefault();
+if (isPaused) {
+resumeGame();
+} else {
+pauseGame();
+}
+return;
+}
+}
+
+if (!inSelect) {
+if (e.key === 'Enter' && homeEl.classList.contains('active')) {
+e.preventDefault();
+goToSelect();
+}
+return;
+}
+
+if (isConfirming || isPaused) return;
+
+const COLS = 3;
+const total = ROSTER.length;
+
+switch (e.key) {
+case 'ArrowLeft':
+e.preventDefault();
+selectedIndex = (selectedIndex - 1 + total) % total;
+updateSelection();
+break;
+case 'ArrowRight':
+e.preventDefault();
+selectedIndex = (selectedIndex + 1) % total;
+updateSelection();
+break;
+case 'ArrowUp':
+e.preventDefault();
+if (selectedIndex - COLS >= 0) selectedIndex -= COLS;
+updateSelection();
+break;
+case 'ArrowDown':
+e.preventDefault();
+if (selectedIndex + COLS < total) selectedIndex += COLS;
+updateSelection();
+break;
+case 'Enter':
+e.preventDefault();
+confirmSelection();
+break;
+case 'Escape':
+e.preventDefault();
+homeEl.classList.add('active');
+selectEl.classList.remove('active');
+inSelect = false;
+syncHomeMusic();
+break;
+}
+});
+
+function confirmSelection() {
+if (isConfirming) return;
+isConfirming = true;
+
+pixelOverlay.classList.remove('in', 'out');
+pixelOverlay.style.opacity = '';
+pixelOverlay.style.backgroundImage = 'none';
+
+slamText.classList.remove('animate');
+slamText.classList.add('animate');
+
+setTimeout(() => {
+pixelOverlay.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' fill='%230b0b0d'/%3E%3Crect width='16' height='16' fill='%23111' opacity='0.5'/%3E%3C/svg%3E")`;
+pixelOverlay.classList.add('out');
+
+setTimeout(() => {
+homeEl.classList.remove('active');
+syncHomeMusic();
+selectEl.classList.remove('active');
+gameEl.classList.add('active');
+isConfirming = false;
+
+applyCharacter(ROSTER[selectedIndex]);
+player.x = window.innerWidth * 0.25;
+player.y = window.innerHeight - 250;
+player.health = player.maxHealth;
+player.isInvulnerable = false;
+player.isStabbing = false;
+player.isCharging = false;
+player.isAttacking = false;
+player.isShooting = false;
+player.chargeTime = 0;
+player.dead = false;
+player.kills = 0;
+player.coins = 0;
+knifeUpgradeLevel = 0;
+doubleCoinsUntil = 0;
+infiniteAmmoUntil = 0;
+adrenalineUntil = 0;
+adrenalinePending = false;
+gameEl.classList.remove('adrenaline-active');
+lastInfiniteAmmoHudState = null;
+if (boostHud) boostHud.replaceChildren();
+isRoundShopOpen = false;
+shopBoughtSomething = false;
+roundShopOverlay.classList.remove('active');
+roundShopOverlay.setAttribute('aria-hidden','true');
+coinHud.classList.remove('visible');
+clearTimeout(coinHudTimer);
+updateCoinHud();
+player.lastSparkAt = 0;
+deathOverlay.classList.remove('active');
+gameEl.classList.remove('shake');
+player.stabFrame = 0;
+player.stabTimer = 0;
+playerSprite.src = PLAYER_IDLE;
+updateHealthBar();
+
+worldOffset = 0;
+
+cycleElapsed = 0;
+isNight = false;
+dayNightOverlay.classList.remove('night');
+dayNightOverlay.style.opacity = '1';
+timeIndicator.textContent = 'Day';
+
+zombieContainer.innerHTML = "";
+itemContainer.innerHTML = "";
+bloodContainer.innerHTML = "";
+envContainer.innerHTML = "";
+zombies.length = 0;
+
+coins.length = 0;
+envProps.length = 0;
+environmentCars.length = 0;
+nextCarSpawnWorldX = 0;
+nextPropSpawnWorldX = 0;
+nextRadiationChunk = 0;
+currentWave = 1;
+waveAdvancePending = false;
+lastAmbientBandageCheck = performance.now();
+lastAmbientCoinCheck = performance.now();
+waveDisplay.textContent = "Wave: 1";
+updateCoinHud();
+isPaused = false;
+pauseOverlay.classList.remove('active');
+// Permanent environment props for this run (once world is created)
+if (environmentImagesReady) {
+spawnEnvironmentProps();
+} else {
+discoverEnvironmentImages().then(() => spawnEnvironmentProps());
+}
+spawnWave(currentWave);
+setupGunForRun();
+
+pixelOverlay.classList.remove('out');
+pixelOverlay.classList.add('in');
+
+setTimeout(() => {
+pixelOverlay.classList.remove('in', 'out');
+pixelOverlay.style.backgroundImage = 'none';
+pixelOverlay.style.opacity = '0';
+slamText.classList.remove('animate');
+}, 650);
+
+}, 600);
+}, 1400);
+}
+
+const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false };
+const player = {
+x: 0,
+y: 0,
+speed: 4.2,
+isMoving: false,
+facing: 'right',
+frame: 0,
+timer: 0,
+health: 100,
+isInvulnerable: false,
+isStabbing: false,
+isCharging: false,
+isAttacking: false,
+chargeStartedAt: 0,
+chargeTime: 0,
+lastSparkAt: 0,
+dead: false,
+kills: 0,
+coins: 0,
+stabFrame: 0,
+stabTimer: 0
+};
+
+let gameLoopId = null;
+let lastTime = performance.now();
+let worldOffset = 0;
+
+const DAY_DURATION = 22;
+const NIGHT_DURATION = 16;
+let cycleElapsed = 0;
+let isNight = false;
+
+const zombies = [];
+
+const coins = [];
+let currentWave = 1;
+let waveAdvancePending = false;
+let isRoundShopOpen = false;
+let shopBoughtSomething = false;
+let currentShopOffers = [];
+let coinHudTimer = null;
+let doubleCoinsUntil = 0;
+let infiniteAmmoUntil = 0;
+let adrenalineUntil = 0;
+let adrenalinePending = false;
+let lastInfiniteAmmoHudState = null;
+let knifeUpgradeLevel = 0; // 0 = base, 1 = Metal, 2 = Iron, 3 = Steel
+let lastAmbientBandageCheck = 0;
+let lastAmbientCoinCheck = 0;
+let radiationLevel = 0;
+let radiationDeathStarted = false;
+
+function spawnZombie(x, y, wave = currentWave) {
+const el = document.createElement('div');
+el.className = 'zombie-wrapper';
+el.style.left = `${x}px`;
+el.style.top = `${y}px`;
+
+const img = document.createElement('img');
+img.className = 'sprite';
+img.src = ZOMBIE_IDLE;
+
+el.appendChild(img);
+zombieContainer.appendChild(el);
+
+const baseSpeed = Math.min(4.65, 2.45 + (wave - 1) * 0.16);
+zombies.push({
+el: el,
+img: img,
+x: x,
+y: y,
+baseSpeed: baseSpeed,
+speed: baseSpeed,
+facing: 'left',
+frame: 0,
+timer: 0,
+isMoving: false,
+isDying: false,
+hp: 6 + Math.floor((wave - 1) / 2),
+knockbackX: 0,
+knockbackY: 0
+});
+}
+
+function spawnWave(wave) {
+waveDisplay.textContent = `Wave: ${wave}`;
+const count = 3 + wave;
+const playerWorldX = player.x + worldOffset;
+const startX = playerWorldX + Math.max(520, window.innerWidth * 0.58);
+
+for (let i = 0; i < count; i++) {
+const x = startX + i * (210 + Math.random() * 100);
+const y = 90 + Math.random() * Math.max(120, window.innerHeight - 300);
+spawnZombie(x, y, wave);
+}
+}
+
+function spawnBandageAtWorld(x, y) {
+const playerWorldX = player.x + worldOffset;
+if (x < playerWorldX - 12) return false;
+const clampedY = Math.max(24, Math.min(y, window.innerHeight - 100));
+addPickup('bandage', x, clampedY);
+return true;
+}
+
+function tryAmbientBandageSpawn(now) {
+if (now - lastAmbientBandageCheck < 5000) return;
+lastAmbientBandageCheck = now;
+if (Math.random() >= 0.12) return;
+
+const playerWorldX = player.x + worldOffset;
+const minX = playerWorldX + 30;
+const maxX = playerWorldX + Math.max(window.innerWidth - player.x - 150, 250);
+const x = minX + Math.random() * (maxX - minX);
+const y = 90 + Math.random() * Math.max(100, window.innerHeight - 250);
+spawnBandageAtWorld(x, y);
+}
+
+function spawnCoinAtWorld(x, y) {
+const el = document.createElement('img');
+el.className = 'coin-item';
+el.src = 'items/coins.png';
+el.alt = 'Coin';
+el.draggable = false;
+const clampedY = Math.max(24, Math.min(y, window.innerHeight - 100));
+el.style.left = `${x - worldOffset}px`;
+el.style.top = `${clampedY}px`;
+itemContainer.appendChild(el);
+const value = 1 + Math.floor(Math.random() * 4);
+coins.push({ x, y: clampedY, el, value });
+return true;
+}
+
+function tryAmbientCoinSpawn(now) {
+if (now - lastAmbientCoinCheck < 3500) return;
+lastAmbientCoinCheck = now;
+if (Math.random() >= 0.28) return;
+if (coins.length >= 6) return;
+
+const playerWorldX = player.x + worldOffset;
+const minX = playerWorldX - 80;
+const maxX = playerWorldX + Math.max(window.innerWidth - player.x + 40, 320);
+const x = minX + Math.random() * (maxX - minX);
+const y = 90 + Math.random() * Math.max(100, window.innerHeight - 250);
+spawnCoinAtWorld(x, y);
+}
+
+function createCoinSpark(screenX, screenY) {
+const count = 3 + Math.floor(Math.random() * 2);
+for (let i = 0; i < count; i++) {
+const p = document.createElement('div');
+p.className = 'coin-spark';
+p.style.left = `${screenX + (Math.random() * 28 - 14)}px`;
+p.style.top = `${screenY + (Math.random() * 20 - 10)}px`;
+gameEl.appendChild(p);
+setTimeout(() => p.remove(), 480);
+}
+}
+
+function playCoinPickupSound() {
+try {
+coinPickupAudio.currentTime = 0;
+coinPickupAudio.play().catch(() => {});
+} catch (e) {}
+}
+
+// ---------- HITBOXES (AABB) ----------
+// Player / zombie wrappers are 140x140. Body is a taller rectangle near the feet.
+// Coins / bandages use a square around their sprite.
+const BODY_HIT_W = 52;
+const BODY_HIT_H = 96;
+const BODY_HIT_OX = (140 - BODY_HIT_W) / 2; // ~44 — center horizontally
+const BODY_HIT_OY = 140 - BODY_HIT_H - 6; // near bottom of sprite
+
+function getPlayerHitbox() {
+return {
+x: player.x + worldOffset + BODY_HIT_OX,
+y: player.y + BODY_HIT_OY,
+w: BODY_HIT_W,
+h: BODY_HIT_H
+};
+}
+
+function getZombieHitbox(z) {
+return {
+x: z.x + BODY_HIT_OX,
+y: z.y + BODY_HIT_OY,
+w: BODY_HIT_W,
+h: BODY_HIT_H
+};
+}
+
+function getCoinHitbox(item) {
+// 36x36 sprite → square hitbox a bit larger for forgiving pickups
+const size = 42;
+return {
+x: item.x + (36 - size) / 2,
+y: item.y + (36 - size) / 2,
+w: size,
+h: size
+};
+}
+
+function getMedkitHitbox(item) {
+// 42x42 bandage sprite → square hitbox
+const size = 46;
+return {
+x: item.x + (42 - size) / 2,
+y: item.y + (42 - size) / 2,
+w: size,
+h: size
+};
+}
+
+function aabbOverlap(a, b) {
+return a.x < b.x + b.w &&
+a.x + a.w > b.x &&
+a.y < b.y + b.h &&
+a.y + a.h > b.y;
+}
+
+function renderHitboxes() {
+ if (!hitboxCtx) return;
+ if (!showHitboxes) {
+   hitboxCtx.clearRect(0, 0, hitboxCanvas.width, hitboxCanvas.height);
+   return;
+ }
+ const dpr = Math.max(1, window.devicePixelRatio || 1);
+ const width = gameEl.clientWidth, height = gameEl.clientHeight;
+ if (hitboxCanvas.width !== Math.round(width*dpr) || hitboxCanvas.height !== Math.round(height*dpr)) {
+   hitboxCanvas.width = Math.round(width*dpr); hitboxCanvas.height = Math.round(height*dpr);
+ }
+ hitboxCtx.setTransform(dpr,0,0,dpr,0,0);
+ hitboxCtx.clearRect(0,0,width,height);
+ function box(r,color,label,world=false) {
+   const x=r.x-(world?worldOffset:0), y=r.y;
+   hitboxCtx.fillStyle=color.replace('1)', '.12)'); hitboxCtx.strokeStyle=color;
+   hitboxCtx.lineWidth=2; hitboxCtx.setLineDash([]);
+   hitboxCtx.fillRect(x,y,r.w,r.h); hitboxCtx.strokeRect(x,y,r.w,r.h);
+   if(label) { hitboxCtx.font='12px Oswald,sans-serif'; hitboxCtx.lineWidth=3;
+     hitboxCtx.strokeStyle='rgba(0,0,0,.9)'; hitboxCtx.strokeText(label,x+2,Math.max(12,y-4));
+     hitboxCtx.fillStyle=color; hitboxCtx.fillText(label,x+2,Math.max(12,y-4)); }
+ }
+ function circle(cx,cy,r,color,label) {
+   hitboxCtx.beginPath(); hitboxCtx.arc(cx,cy,r,0,Math.PI*2);
+   hitboxCtx.fillStyle='rgba(255,190,40,.035)'; hitboxCtx.fill();
+   hitboxCtx.strokeStyle=color; hitboxCtx.lineWidth=1.5; hitboxCtx.setLineDash([6,4]);
+   hitboxCtx.stroke(); hitboxCtx.setLineDash([]);
+   if(label) { hitboxCtx.font='11px Oswald,sans-serif'; hitboxCtx.fillStyle=color; hitboxCtx.fillText(label,cx+r*.55,cy-r*.55); }
+ }
+ if (!player.dead) box(getPlayerHitbox(),'rgba(80,220,255,1)','PLAYER BODY',true);
+ zombies.forEach(z=>{if(!z.isDying) box(getZombieHitbox(z),'rgba(255,75,75,1)','ZOMBIE BODY',true);});
+ coins.forEach(item=>box(getCoinHitbox(item),'rgba(255,220,50,1)','COIN',true));
+ if (typeof pickups!=='undefined') {
+   const p=getPlayerHitbox(), fx=p.x+p.w/2, fy=p.y+p.h-10;
+   circle(fx-worldOffset,fy,PICKUP_RANGE,'rgba(255,190,40,1)','PICKUP RANGE');
+   pickups.forEach(item=>{const size=pickupSize(item); box({x:item.x,y:item.y,w:size.w,h:size.h},
+     item.kind==='bandage'?'rgba(80,255,130,1)':'rgba(255,170,60,1)',item.kind.toUpperCase(),true);});
+ }
+ environmentCars.forEach(car=>box({x:car.x+car.w*.08,y:car.y+car.h*.60,w:car.w*.84,h:car.h*.30},'rgba(255,145,50,1)','CAR',true));
+ nuclearPuddles.forEach(p=>{box({x:p.x+p.w*.12,y:p.y+p.h*.22,w:p.w*.76,h:p.h*.56},'rgba(90,255,90,1)','RADIATION CONTACT',true);
+   circle(p.x-worldOffset+p.w/2,p.y+p.h/2,275,'rgba(90,255,90,1)','RADIATION RANGE');});
+ if (typeof bullets!=='undefined') bullets.forEach(b=>box({x:b.x,y:b.y,w:BULLET_W,h:BULLET_H},'rgba(255,255,255,1)','BULLET',true));
+ if(debugAttackHitbox && performance.now()<debugAttackHitbox.expiresAt) box(debugAttackHitbox,'rgba(255,70,220,1)','MELEE',true);
+ else debugAttackHitbox=null;
+}
+
+
+function collectCoins() {
+const pBox = getPlayerHitbox();
+for (let i = coins.length - 1; i >= 0; i--) {
+const item = coins[i];
+const screenX = item.x - worldOffset;
+item.el.style.left = `${screenX}px`;
+if (aabbOverlap(pBox, getCoinHitbox(item))) {
+player.coins += item.value * (performance.now() < doubleCoinsUntil ? 2 : 1);
+updateCoinHud(true);
+createCoinSpark(screenX + 12, item.y + 10);
+playCoinPickupSound();
+item.el.remove();
+coins.splice(i, 1);
+}
+}
+}
+
+function updateDayNight(dt) {
+cycleElapsed += dt;
+const cycleLen = DAY_DURATION + NIGHT_DURATION;
+if (cycleElapsed >= cycleLen) cycleElapsed -= cycleLen;
+
+const wasNight = isNight;
+isNight = cycleElapsed >= DAY_DURATION;
+
+if (isNight !== wasNight) {
+if (isNight) {
+dayNightOverlay.classList.add('night');
+timeIndicator.textContent = 'Night';
+} else {
+dayNightOverlay.classList.remove('night');
+dayNightOverlay.style.opacity = '1';
+timeIndicator.textContent = 'Day';
+}
+}
+}
+
+function getNightSpeedMult() {
+return isNight ? 1.48 : 1.18;
+}
+
+function getNightDetectionRange() {
+return isNight ? 900 : 760;
+}
+
+function showHealingEffect() {
+healFlash.classList.remove('active');
+void healFlash.offsetWidth;
+healFlash.classList.add('active');
+
+const count = 2 + Math.floor(Math.random() * 2);
+for (let i = 0; i < count; i++) {
+const plus = document.createElement('div');
+plus.className = 'heal-plus';
+plus.style.left = `${player.x + 45 + Math.random() * 48}px`;
+plus.style.top = `${player.y + 35 + Math.random() * 55}px`;
+gameEl.appendChild(plus);
+setTimeout(() => plus.remove(), 760);
+}
+}
+
+function updateHealthBar() {
+const hp = Math.max(0, player.health);
+const max = player.maxHealth || 100;
+const pct = hp / max * 100;
+healthFill.style.width = `${pct}%`;
+healthText.textContent = `${hp}/${max}`;
+
+if (pct < 30) {
+healthFill.style.backgroundColor = '#ef4444';
+} else if (pct < 60) {
+healthFill.style.backgroundColor = '#facc15';
+} else {
+healthFill.style.backgroundColor = '#4ade80';
+}
+}
+
+playerSprite.src = PLAYER_IDLE;
+
+function releaseChargedStab() {
+if (!player.isCharging || player.dead) return;
+player.isCharging = false;
+player.isStabbing = false;
+player.isAttacking = true;
+player.chargeTime = Math.min(3, Math.max(0, (performance.now() - player.chargeStartedAt) / 1000));
+playerSprite.src = PLAYER_STAB[1];
+const damage = (1 + (2 * player.chargeTime / 3)) * activeChar.stats.meleeMult * Math.pow(1.25, knifeUpgradeLevel) * (performance.now() < adrenalineUntil ? 2 : 1);
+setTimeout(() => { if (!player.dead) performStab(damage); }, 90);
+setTimeout(() => {
+if (!player.dead) {
+player.isAttacking = false;
+playerSprite.src = idleSprite();
+}
+}, 300);
+}
+
+window.addEventListener('keydown', (e) => {
+if (isPaused) return;
+
+if (e.key === ' ' && player.dead && deathOverlay.classList.contains('active')) {
+e.preventDefault();
+deathOverlay.classList.remove('active');
+gameEl.classList.remove('active');
+selectEl.classList.add('active');
+inSelect = true;
+isConfirming = false;
+updateSelection();
+return;
+}
+if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
+if (e.key === ' ' && gameEl.classList.contains('active') && !player.dead) {
+e.preventDefault();
+if (!player.isCharging && !player.isAttacking && !player.isReloading) {
+player.isCharging = true;
+player.isStabbing = true;
+player.chargeStartedAt = performance.now();
+player.chargeTime = 0;
+playerSprite.src = PLAYER_STAB[0];
+}
+}
+});
+
+window.addEventListener('keyup', (e) => {
+if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
+if (e.key === ' ') {
+e.preventDefault();
+releaseChargedStab();
+}
+});
+window.addEventListener('blur', () => {
+Object.keys(keys).forEach(k => keys[k] = false);
+releaseChargedStab();
+});
+
+function createBlood(x, y) {
+for (let i = 0; i < 8; i++) {
+const p = document.createElement('div');
+p.className = 'blood-particle';
+const rx = x + (Math.random() * 60 - 30);
+const ry = y + (Math.random() * 60 - 30);
+p.style.left = `${rx}px`;
+p.style.top = `${ry}px`;
+bloodContainer.appendChild(p);
+
+setTimeout(() => {
+p.style.transition = 'opacity 0.5s';
+p.style.opacity = '0';
+setTimeout(() => p.remove(), 500);
+}, 50);
+}
+}
+
+function createChargeSpark() {
+const p = document.createElement('div');
+p.className = Math.random() < 0.45 ? 'charge-particle cross' : 'charge-particle';
+p.style.left = `${player.x + 45 + Math.random() * 50}px`;
+p.style.top = `${player.y + 20 + Math.random() * 75}px`;
+gameEl.appendChild(p);
+setTimeout(() => p.remove(), 260);
+}
+
+const DEATH_REASONS = {
+  radiation: [
+    'Radiation poisoning.',
+    'Experienced too much radiation.',
+    'Radiation sickness.'
+  ],
+  zombie: [
+    'Mauled by a zombie.',
+    'Torn to shreds.',
+    "That's the end, folks."
+  ]
+};
+
+function endGame(cause = 'zombie') {
+if (player.dead) return;
+footstepsAudio.pause();
+footstepsAudio.currentTime = 0;
+player.dead = true;
+player.isCharging = false;
+player.isStabbing = false;
+player.isAttacking = false;
+player.isMoving = false;
+playerSprite.src = PLAYER_IDLE;
+player.hasGun = false;
+player.isReloading = false;
+updateAmmoHud();
+Object.keys(keys).forEach(k => keys[k] = false);
+deathKills.textContent = `Zombies killed: ${player.kills}`;
+const reasons = DEATH_REASONS[cause] || DEATH_REASONS.zombie;
+deathReason.textContent = reasons[Math.floor(Math.random() * reasons.length)];
+deathOverlay.classList.add('active');
+}
+
+function performStab(damage) {
+if (player.dead) return;
+const pBox = getPlayerHitbox();
+const reach = 100;
+const sign = player.facing === 'right' ? 1 : -1;
+// Attack volume in front of the player body rectangle
+const attackBox = {
+x: sign > 0 ? pBox.x + pBox.w * 0.35 : pBox.x - reach + pBox.w * 0.65,
+y: pBox.y - 10,
+w: reach,
+h: pBox.h + 20
+};
+
+zombies.forEach(z => {
+if (z.isDying || player.dead) return;
+const zBox = getZombieHitbox(z);
+if (!aabbOverlap(attackBox, zBox)) return;
+
+const dx = (zBox.x + zBox.w / 2) - (pBox.x + pBox.w / 2);
+const dy = (zBox.y + zBox.h / 2) - (pBox.y + pBox.h / 2);
+z.hp = Math.max(0, z.hp - damage);
+const len = Math.max(1, Math.hypot(dx, dy));
+z.knockbackX += (dx / len) * 18;
+z.knockbackY += (dy / len) * 10;
+createBlood(z.x - worldOffset + 70, z.y + 70);
+if (z.hp <= 0) {
+z.isDying = true;
+player.kills++;
+if (Math.random() < 0.07) {
+spawnBandageAtWorld(z.x, z.y + 42);
+}
+const dropCount = 1 + Math.floor(Math.random() * 3);
+for (let c = 0; c < dropCount; c++) {
+const ox = (Math.random() - 0.5) * 56;
+const oy = (Math.random() - 0.25) * 40;
+spawnCoinAtWorld(z.x + ox, z.y + 40 + oy);
+}
+z.img.src = ZOMBIE_IDLE;
+z.el.classList.add('dying');
+z.el.style.top = `${z.y + 200}px`;
+z.el.style.opacity = '0';
+setTimeout(() => z.el.remove(), 900);
+}
+});
+}
+
+function updateGame(currentTime) {
+if (!gameEl.classList.contains('active')) {
+footstepsAudio.pause();
+zombieGroansAudio.pause();
+gameLoopId = requestAnimationFrame(updateGame);
+return;
+}
+
+// Keep timed-effect labels accurate, including when a menu is open.
+if (currentTime >= adrenalineUntil && gameEl.classList.contains('adrenaline-active')) {
+  gameEl.classList.remove('adrenaline-active');
+  player.speed = 4.2 * activeChar.stats.speedMult;
+}
+updateBoostHud(currentTime);
+
+// Keep the loop alive while paused, but freeze simulation
+if (isPaused || isRoundShopOpen || radiationDeathStarted) {
+renderHitboxes();
+footstepsAudio.pause();
+zombieGroansAudio.pause();
+lastTime = currentTime;
+gameLoopId = requestAnimationFrame(updateGame);
+return;
+}
+
+const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
+lastTime = currentTime;
+
+updateDayNight(dt);
+updateEnvironmentProps();
+updateNuclearPuddles(dt);
+
+tryAmbientBandageSpawn(currentTime);
+tryAmbientCoinSpawn(currentTime);
+
+collectCoins();
+updatePickups(dt);
+updateReload(dt);
+updateBullets(dt);
+const infiniteAmmoActiveNow = hasInfiniteAmmo();
+if (lastInfiniteAmmoHudState !== infiniteAmmoActiveNow) {
+  lastInfiniteAmmoHudState = infiniteAmmoActiveNow;
+  updateAmmoHud();
+}
+
+if (player.isCharging) {
+player.chargeTime = Math.min(3, (currentTime - player.chargeStartedAt) / 1000);
+if (player.chargeTime >= 3 && (!player.lastSparkAt || currentTime - player.lastSparkAt > 110)) {
+createChargeSpark();
+player.lastSparkAt = currentTime;
+}
+}
+
+if (!player.isCharging && !player.isAttacking && !player.dead && !player.isReloading && !player.isShooting) {
+let dx = 0, dy = 0;
+if (keys.w || keys.ArrowUp) dy -= 1;
+if (keys.s || keys.ArrowDown) dy += 1;
+if (keys.a || keys.ArrowLeft) dx -= 1;
+if (keys.d || keys.ArrowRight) dx += 1;
+
+if (dx !== 0 || dy !== 0) {
+if (!player.isMoving) {
+player.isMoving = true; player.frame = 0; player.timer = 0;
+playerSprite.src = PLAYER_WALK[0];
+}
+player.timer += dt;
+if (player.timer >= 0.28) {
+player.timer = 0;
+player.frame = (player.frame + 1) % PLAYER_WALK.length;
+playerSprite.src = PLAYER_WALK[player.frame];
+}
+} else if (player.isMoving) {
+player.isMoving = false; player.frame = 0; playerSprite.src = idleSprite(); player.timer = 0;
+}
+
+if (dx < 0 && player.facing !== 'left') {
+player.facing = 'left'; playerWrapper.classList.add('face-left');
+} else if (dx > 0 && player.facing !== 'right') {
+player.facing = 'right'; playerWrapper.classList.remove('face-left');
+}
+if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+
+let newX = player.x + dx * player.speed;
+let newY = Math.max(0, Math.min(player.y + dy * player.speed, window.innerHeight - 140));
+const rightBoundary = window.innerWidth * 0.5, leftWall = 180;
+let candidateOffset = worldOffset;
+if (newX > rightBoundary && dx > 0) {
+candidateOffset += newX - rightBoundary;
+newX = rightBoundary;
+} else if (newX < leftWall && dx < 0) {
+const shift = leftWall - newX;
+if (candidateOffset - shift >= 0) candidateOffset -= shift;
+newX = leftWall;
+}
+candidateOffset = Math.max(0, candidateOffset);
+const candidateWorldX = newX + candidateOffset;
+
+// Resolve horizontal movement first, then vertical movement, so the player can slide along a car.
+const currentWorldX = player.x + worldOffset;
+if (!collidesWithEnvironmentCar(candidateWorldX, player.y)) {
+player.x = newX;
+worldOffset = candidateOffset;
+}
+const movedWorldX = player.x + worldOffset;
+if (!collidesWithEnvironmentCar(movedWorldX, newY)) {
+player.y = newY;
+}
+playerWrapper.style.left = `${player.x}px`;
+playerWrapper.style.top = `${player.y}px`;
+dirtField.style.backgroundPositionX = `${-worldOffset}px`;
+}
+
+const shouldPlayFootsteps =
+gameEl.classList.contains('active') &&
+!player.dead &&
+!player.isCharging &&
+!player.isAttacking &&
+!player.isReloading &&
+player.isMoving;
+
+if (shouldPlayFootsteps) {
+if (footstepsAudio.paused) {
+footstepsAudio.play().catch(() => {});
+}
+} else {
+footstepsAudio.pause();
+if (!footstepsAudio.paused) footstepsAudio.currentTime = 0;
+}
+
+if (!player.dead && !waveAdvancePending &&
+zombies.length > 0 && zombies.every(z => z.isDying)) {
+waveAdvancePending = true;
+setTimeout(() => {
+if (player.dead || !gameEl.classList.contains('active')) { waveAdvancePending = false; return; }
+openRoundShop();
+}, 1100);
+}
+
+const nightMult = getNightSpeedMult();
+const detectionRange = getNightDetectionRange();
+
+const playerBox = getPlayerHitbox();
+let zombieWithinGroanRange = false;
+const zombieGroanRange = 520;
+
+zombies.forEach(z => {
+if (z.isDying || player.dead) return;
+
+z.speed = (z.baseSpeed || z.speed) * nightMult * activeChar.stats.zombieSpeedMult;
+
+// Chase using body centers so pathing matches rectangle hitboxes
+const zBox = getZombieHitbox(z);
+const pCx = playerBox.x + playerBox.w / 2;
+const pCy = playerBox.y + playerBox.h / 2;
+const zCx = zBox.x + zBox.w / 2;
+const zCy = zBox.y + zBox.h / 2;
+let distX = pCx - zCx;
+let distY = pCy - zCy;
+let dist = Math.hypot(distX, distY);
+if (dist <= zombieGroanRange) zombieWithinGroanRange = true;
+let moved = false;
+
+// Stop when rectangles nearly touch (small separation gap)
+const stopDist = (BODY_HIT_W + BODY_HIT_H) * 0.22;
+
+if (dist > stopDist && dist < detectionRange) {
+z.facing = distX > 0 ? 'right' : 'left';
+
+const speedPerSecond = z.speed * 60;
+const step = Math.min(speedPerSecond * dt, dist - stopDist);
+z.x += (distX / dist) * step;
+z.y += (distY / dist) * step;
+moved = step > 0;
+}
+
+if (Math.abs(z.knockbackX) > 0.1 || Math.abs(z.knockbackY) > 0.1) {
+z.x += z.knockbackX;
+z.y += z.knockbackY;
+z.knockbackX *= 0.72;
+z.knockbackY *= 0.72;
+moved = true;
+}
+
+// Damage uses rectangle overlap. Zombies can hit you while charging (holding space).
+// Only invulnerability frames block damage.
+if (aabbOverlap(playerBox, getZombieHitbox(z)) && !player.isInvulnerable) {
+const damage = Math.round((Math.floor(Math.random() * 6) + 10) * activeChar.stats.damageTakenMult);
+player.health = Math.max(0, player.health - damage);
+updateHealthBar();
+gameEl.classList.remove('shake');
+void gameEl.offsetWidth;
+gameEl.classList.add('shake');
+setTimeout(() => gameEl.classList.remove('shake'), 240);
+if (player.health <= 0) {
+endGame('zombie');
+return;
+}
+
+player.isInvulnerable = true;
+flash.style.backgroundColor = '#ef4444';
+flash.style.opacity = '0.3';
+setTimeout(() => {
+flash.style.opacity = '0';
+player.isInvulnerable = false;
+}, 800);
+}
+
+if (moved) {
+if (!z.isMoving) {
+z.isMoving = true;
+z.frame = 0;
+z.timer = 0;
+z.img.src = ZOMBIE_FRAMES[0];
+}
+z.timer += dt;
+if (z.timer >= 0.19) {
+z.timer = 0;
+z.frame = (z.frame + 1) % ZOMBIE_FRAMES.length;
+z.img.src = ZOMBIE_FRAMES[z.frame];
+}
+} else {
+if (z.isMoving) {
+z.isMoving = false;
+z.frame = 0;
+z.timer = 0;
+z.img.src = ZOMBIE_IDLE;
+}
+}
+
+if (z.facing === 'left') {
+z.el.classList.add('face-left');
+} else {
+z.el.classList.remove('face-left');
+}
+
+const screenX = z.x - worldOffset;
+z.el.style.left = `${screenX}px`;
+z.el.style.top = `${z.y}px`;
+});
+
+// A single looping track covers all nearby zombies. Additional zombies do not
+// restart it; it stops only after every living zombie leaves the audible range.
+if (zombieWithinGroanRange && !player.dead) {
+  if (zombieGroansAudio.paused) zombieGroansAudio.play().then(() => { zombieGroansAudioUnlocked = true; }).catch(() => {});
+} else if (!zombieGroansAudio.paused) {
+  zombieGroansAudio.pause();
+  zombieGroansAudio.currentTime = 0;
+}
+
+renderHitboxes();
+gameLoopId = requestAnimationFrame(updateGame);
+}
+
+/* ==========================================================
+CHARACTERS, GLOCK, AMMO
+========================================================== */
+let activeChar = ROSTER[0];
+player.maxHealth = 100;
+
+// Switch every in-game sprite / stat over to the chosen character.
+function applyCharacter(char) {
+activeChar = char;
+PLAYER_IDLE = char.sprites.idle;
+PLAYER_WALK.splice(0, PLAYER_WALK.length, ...char.sprites.walk);
+PLAYER_STAB.splice(0, PLAYER_STAB.length, ...char.sprites.stab);
+player.speed = 4.2 * char.stats.speedMult * (performance.now() < adrenalineUntil ? 2 : 1);
+player.maxHealth = char.stats.maxHealth;
+}
+
+const GLOCK_SPAWN_CHANCE = 0.20; // chance the glock is lying on the ground at the start of a run
+const GLOCK_WIDTH = 66; // glock on the ground (px). In hand it stays its normal size.
+const AMMO_WIDTH = 52; // glock_ammo on the ground (px)
+const PICKUP_RANGE = 85; // how close you must be for the "E" prompt / pickup (px)
+const AMMO_CHUNK_CHANCE = 0.30; // chance per world screen-width of an ammo box spawning
+
+const MAX_MAG = 15; // pistol capacity
+const MAX_RELOADS = 20;
+const RELOAD_TIME = 1.0; // seconds
+
+const BULLET_W = 14; // bullet hitbox == bullet visual (px)
+const BULLET_H = 5;
+const BULLET_SPEED = 1800; // px per second
+const BULLET_DAMAGE = 3; // = 3 basic knife stabs (a basic stab does 1)
+
+// Barrel tip on the 140x140 player sprite when facing right (px from top-left), measured from the gun idle sprite.
+const MUZZLE_X = 98;
+const MUZZLE_Y = 52;
+
+const GLOCK_SRC = "guns/glock.png";
+const AMMO_SRC = "guns/ammo/glock_ammo.png";
+
+[GLOCK_SRC, AMMO_SRC].forEach(src => { const img = new Image(); img.src = src; });
+ROSTER.forEach(c => {
+[c.sprites.idle, c.sprites.gunIdle, ...c.sprites.walk, ...c.sprites.stab].forEach(src => {
+const img = new Image(); img.src = src;
+});
+});
+
+const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+
+const COIN_IMAGE = 'items/coins.png';
+const SHOP_CATALOGUE = [
+  { id:'doubleCoins', title:'2X Coins', description:'Get 2x the coins for 5 minutes.', image:COIN_IMAGE, price:85, weight:1.0 },
+  { id:'glock19', title:'Glock 19', description:'Efficient hand pistol with medium damage.', image:'guns/glock.png', price:145, weight:0.8 },
+  { id:'knife', title:'Metal knife', description:'Increase your knife damage by 1.25x.', image:'guns/weapons/knife.png', price:105, weight:1.0 },
+  { id:'medkit', title:'Medkit', description:'Heal by 100 health.', image:'items/medkit.png', price:75, weight:1.0 },
+  { id:'adrenaline', title:'Adrenalin', description:'Get a burst of energy for 15 seconds.', image:'items/adrenalin_needle.png', price:110, weight:0.9 },
+  { id:'drugs', title:'Drugs', description:'Reduces your radiation poisoning.', image:'items/drugs.png', price:85, weight:0.9 },
+  { id:'infiniteAmmo', title:'Infinite Ammunition', description:'Get infinite ammunition for 5 minutes.', image:'guns/ammo/glock_ammo.png', price:285, weight:0.55 }
+];
+
+function hasInfiniteAmmo() {
+  return !!activeChar.stats.infiniteAmmo || performance.now() < infiniteAmmoUntil;
+}
+
+// Only effects with an actual countdown are shown here. Permanent character
+// traits and instant purchases (such as healing or knife upgrades) are omitted.
+function updateBoostHud(now = performance.now()) {
+  const timedBoosts = [
+    { id: 'infiniteAmmo', until: infiniteAmmoUntil, image: 'guns/ammo/glock_ammo.png', description: 'Infinite ammunition' },
+    { id: 'doubleCoins', until: doubleCoinsUntil, image: COIN_IMAGE, description: '2x coins' },
+    { id: 'adrenaline', until: adrenalineUntil, image: 'items/adrenalin_needle.png', description: 'Adrenalin — 2x speed and melee damage' }
+  ];
+  for (const boost of timedBoosts) {
+    const remaining = Math.max(0, Math.ceil((boost.until - now) / 1000));
+    let item = boostHud.querySelector(`[data-boost-id="${boost.id}"]`);
+    if (remaining <= 0) {
+      if (item) item.remove();
+      continue;
+    }
+    if (!item) {
+      item = document.createElement('div');
+      item.className = 'boost-hud-item';
+      if (boost.id === 'adrenaline') item.classList.add('adrenaline-boost');
+      item.dataset.boostId = boost.id;
+      item.dataset.tooltip = boost.description;
+      const image = document.createElement('img');
+      image.src = boost.image;
+      image.alt = '';
+      image.draggable = false;
+      const timer = document.createElement('span');
+      item.append(image, timer);
+      boostHud.appendChild(item);
+    }
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
+    item.querySelector('span').textContent = `${minutes}m${seconds}s`;
+    item.setAttribute('aria-label', `${boost.description}, ${minutes}m${seconds}s remaining`);
+  }
+}
+
+function updateCoinHud(show = false) {
+  coinHudCount.textContent = String(player.coins);
+  shopCoinCount.textContent = String(player.coins);
+  if (show && !isRoundShopOpen) {
+    coinHud.classList.add('visible');
+    clearTimeout(coinHudTimer);
+    coinHudTimer = setTimeout(() => coinHud.classList.remove('visible'), 2000);
+  }
+}
+function currentKnifeShopOffer() {
+  if (knifeUpgradeLevel >= 3) return null;
+  const names = ['Metal knife','Iron knife','Steel knife'];
+  const descriptions = [
+    'Increase your knife damage by 1.25x.',
+    'Increase your knife damage by another 1.25x.',
+    'Increase your knife damage by another 1.25x.'
+  ];
+  return {
+    id:'knife', title:names[knifeUpgradeLevel], description:descriptions[knifeUpgradeLevel],
+    image:'guns/weapons/knife.png', price:[105,185,295][knifeUpgradeLevel], weight:1.0
+  };
+}
+function buildShopOfferPool() {
+  const knife = currentKnifeShopOffer();
+  const pool = SHOP_CATALOGUE.filter(item => item.id !== 'knife').map(item => ({...item}));
+  if (knife) pool.push(knife);
+  return pool;
+}
+function openRoundShop() {
+  if (player.dead || isRoundShopOpen) return;
+  isRoundShopOpen = true;
+  shopBoughtSomething = false;
+  footstepsAudio.pause();
+  updateCoinHud();
+  coinHud.classList.remove('visible');
+  clearTimeout(coinHudTimer);
+  roundShopNext.textContent = 'Skip';
+  shopSubtitle.textContent = `Wave ${currentWave} cleared — spend your coins`;
+  const pool = buildShopOfferPool();
+  currentShopOffers = [];
+  while (currentShopOffers.length < 3 && pool.length) {
+    const total = pool.reduce((sum, item) => sum + item.weight, 0);
+    let roll = Math.random() * total;
+    let chosen = pool[pool.length - 1];
+    for (const item of pool) { roll -= item.weight; if (roll <= 0) { chosen = item; break; } }
+    currentShopOffers.push(chosen);
+    pool.splice(pool.indexOf(chosen), 1);
+  }
+  renderRoundShop();
+  pixelOverlay.classList.remove('in','out');
+  pixelOverlay.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' fill='%230b0b0d'/%3E%3Crect width='16' height='16' fill='%23111' opacity='.5'/%3E%3C/svg%3E")`;
+  pixelOverlay.classList.add('out');
+  setTimeout(() => {
+    roundShopOverlay.classList.add('active');
+    roundShopOverlay.setAttribute('aria-hidden','false');
+    pixelOverlay.classList.remove('out');
+    pixelOverlay.classList.add('in');
+    setTimeout(() => { pixelOverlay.classList.remove('in'); pixelOverlay.style.backgroundImage='none'; }, 650);
+  }, 620);
+}
+function renderRoundShop() {
+  roundShopCards.innerHTML = '';
+  currentShopOffers.forEach((offer, index) => {
+    const card = document.createElement('article');
+    card.className = 'shop-card';
+    const imageWrap = document.createElement('div');
+    imageWrap.className = 'shop-card-image-wrap';
+    const image = document.createElement('img');
+    image.className = 'shop-card-image';
+    image.src = offer.image;
+    image.alt = offer.title;
+    image.draggable = false;
+    imageWrap.appendChild(image);
+    const title = document.createElement('div');
+    title.className = 'shop-card-title';
+    title.textContent = offer.title;
+    const description = document.createElement('div');
+    description.className = 'shop-card-description';
+    description.textContent = offer.description;
+    const buy = document.createElement('button');
+    buy.className = 'shop-buy-btn';
+    buy.type = 'button';
+    if (offer.sold) {
+      buy.textContent = 'Sold out';
+      buy.classList.add('sold');
+      buy.disabled = true;
+    } else {
+      buy.innerHTML = `<img src="${COIN_IMAGE}" alt="">${offer.price}`;
+      buy.disabled = player.coins < offer.price;
+      buy.addEventListener('click', () => purchaseShopOffer(index));
+    }
+    card.append(imageWrap,title,description,buy);
+    roundShopCards.appendChild(card);
+  });
+  updateCoinHud();
+  roundShopNext.textContent = shopBoughtSomething ? 'Next' : 'Skip';
+}
+function purchaseShopOffer(index) {
+  const offer = currentShopOffers[index];
+  if (!offer || offer.sold || player.coins < offer.price) return;
+  player.coins -= offer.price;
+  offer.sold = true;
+  shopBoughtSomething = true;
+  if (offer.id === 'doubleCoins') {
+    doubleCoinsUntil = Math.max(performance.now(), doubleCoinsUntil) + 5 * 60 * 1000;
+  } else if (offer.id === 'glock19') {
+    player.hasGun = true;
+    player.ammo = { mag: MAX_MAG, reloads: MAX_RELOADS };
+    player.isReloading = false;
+    player.reloadLeft = 0;
+    playerSprite.src = idleSprite();
+    updateAmmoHud();
+  } else if (offer.id === 'knife') {
+    knifeUpgradeLevel = Math.min(3, knifeUpgradeLevel + 1);
+  } else if (offer.id === 'medkit') {
+    player.health = Math.min(player.maxHealth, player.health + 100);
+    updateHealthBar();
+    showHealingEffect();
+  } else if (offer.id === 'adrenaline') {
+    // The boost starts only after the shop closes and the next wave is live.
+    adrenalinePending = true;
+  } else if (offer.id === 'drugs') {
+    radiationLevel = Math.max(0, radiationLevel - 50);
+    radiationPercent.textContent = `${Math.floor(radiationLevel)}%`;
+    radiationHud.classList.toggle('danger', radiationLevel >= 100);
+  } else if (offer.id === 'infiniteAmmo') {
+    infiniteAmmoUntil = Math.max(performance.now(), infiniteAmmoUntil) + 5 * 60 * 1000;
+    updateAmmoHud();
+  }
+  updateBoostHud();
+  renderRoundShop();
+  const card = roundShopCards.children[index];
+  const button = card && card.querySelector('.shop-buy-btn');
+  if (button) {
+    button.textContent = 'Sold out';
+    button.classList.add('sold');
+    button.disabled = true;
+  }
+  roundShopNext.textContent = 'Next';
+}
+let roundShopTransitioning = false;
+function closeRoundShop() {
+  if (!isRoundShopOpen || roundShopTransitioning) return;
+  roundShopTransitioning = true;
+  roundShopNext.disabled = true;
+  // Keep the shop covering the game while the pixel curtain closes. This
+  // prevents the gameplay/home layers flashing through during the transition.
+  pixelOverlay.classList.remove('in', 'out');
+  pixelOverlay.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' fill='%230b0b0d'/%3E%3Crect width='16' height='16' fill='%23111' opacity='.5'/%3E%3C/svg%3E")`;
+  void pixelOverlay.offsetWidth;
+  pixelOverlay.classList.add('out');
+  // Wait for the complete 600ms pixel fade before changing the underlying game.
+  setTimeout(() => {
+    roundShopOverlay.classList.remove('active');
+    roundShopOverlay.setAttribute('aria-hidden','true');
+    currentWave++;
+    waveDisplay.textContent = `Wave: ${currentWave}`;
+    zombies.length = 0;
+    zombieContainer.innerHTML = '';
+    spawnWave(currentWave);
+    isRoundShopOpen = false;
+    if (adrenalinePending) {
+      adrenalinePending = false;
+      adrenalineUntil = performance.now() + 15000;
+      player.speed = 4.2 * activeChar.stats.speedMult * 2;
+      gameEl.classList.add('adrenaline-active');
+      updateBoostHud();
+    }
+    waveAdvancePending = false;
+    lastTime = performance.now();
+    updateCoinHud();
+    roundShopNext.disabled = false;
+    roundShopTransitioning = false;
+    pixelOverlay.classList.remove('out');
+    pixelOverlay.classList.add('in');
+    setTimeout(() => {
+      pixelOverlay.classList.remove('in');
+      pixelOverlay.style.backgroundImage = 'none';
+    }, 650);
+  }, 650);
+}
+roundShopNext.addEventListener('click', closeRoundShop);
+
+
+const gunStyle = document.createElement('style');
+gunStyle.textContent = `
+.glock-item, .ammo-item {
+position: absolute;
+height: auto;
+object-fit: contain;
+image-rendering: pixelated;
+image-rendering: crisp-edges;
+z-index: 9;
+pointer-events: none;
+filter: drop-shadow(2px 3px 0 rgba(0,0,0,.45));
+}
+.glock-item { width: ${GLOCK_WIDTH}px; }
+.ammo-item { width: ${AMMO_WIDTH}px; }
+.e-prompt {
+position: absolute;
+width: 36px;
+height: 36px;
+z-index: 40;
+pointer-events: none;
+display: none;
+animation: ePromptBob .9s steps(2, end) infinite;
+}
+.e-prompt svg { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+@keyframes ePromptBob {
+0%, 100% { transform: translateY(0); }
+50% { transform: translateY(-3px); }
+}
+.bullet {
+position: absolute;
+width: ${BULLET_W}px;
+height: ${BULLET_H}px;
+background: #ffe45c;
+z-index: 20;
+pointer-events: none;
+}
+#ammoHud {
+position: absolute;
+right: 28px;
+bottom: 26px;
+z-index: 50;
+display: flex;
+flex-direction: column;
+align-items: center;
+pointer-events: none;
+}
+#ammoHud svg { display: block; image-rendering: pixelated; }
+#ammoHud .ammo-label {
+margin-top: 4px;
+font-family: 'Oswald', sans-serif;
+font-size: 11px;
+letter-spacing: 3px;
+color: #fff;
+text-shadow: 1px 1px 0 #000;
+}
+`;
+document.head.appendChild(gunStyle);
+
+// ---------- pixel-art number text for the ammo counter ----------
+const PIXEL_GLYPHS = {
+'0': ['###', '#.#', '#.#', '#.#', '###'],
+'1': ['.#.', '##.', '.#.', '.#.', '###'],
+'2': ['###', '..#', '###', '#..', '###'],
+'3': ['###', '..#', '###', '..#', '###'],
+'4': ['#.#', '#.#', '###', '..#', '..#'],
+'5': ['###', '#..', '###', '..#', '###'],
+'6': ['###', '#..', '###', '#.#', '###'],
+'7': ['###', '..#', '..#', '..#', '..#'],
+'8': ['###', '#.#', '###', '#.#', '###'],
+'9': ['###', '#.#', '###', '..#', '###'],
+'|': ['#', '#', '#', '#', '#'],
+' ': ['..', '..', '..', '..', '..'],
+'∞': ['.##.##.', '#..#..#', '#..#..#', '#..#..#', '.##.##.']
+};
+
+function pixelTextSvg(text, px) {
+let x = 0, rects = '';
+for (const ch of text) {
+const g = PIXEL_GLYPHS[ch];
+if (!g) continue;
+for (let r = 0; r < 5; r++) {
+for (let c = 0; c < g[r].length; c++) {
+if (g[r][c] === '#') rects += `<rect x="${x + c}" y="${r}" width="1" height="1"/>`;
+}
+}
+x += g[0].length + 1;
+}
+const w = x - 1;
+return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w + 1} 6" width="${(w + 1) * px}" height="${6 * px}" shape-rendering="crispEdges">` +
+`<g fill="#000" transform="translate(1,1)">${rects}</g><g fill="#fff">${rects}</g></svg>`;
+}
+
+const ammoHud = document.createElement('div');
+ammoHud.id = 'ammoHud';
+gameEl.appendChild(ammoHud);
+
+function updateAmmoHud() {
+let text = '0 | 0';
+if (player.hasGun) {
+text = hasInfiniteAmmo()
+? '∞ | ∞'
+: `${player.ammo.mag} | ${player.ammo.reloads}`;
+}
+ammoHud.innerHTML = pixelTextSvg(text, 4) + '<div class="ammo-label">AMMO</div>';
+}
+
+// ---------- state ----------
+player.hasGun = false;
+player.isReloading = false;
+player.isShooting = false;
+player.reloadLeft = 0;
+player.ammo = { mag: 0, reloads: 0 };
+
+const pickups = []; // { kind: 'glock' | 'ammo', x (world), y, el }
+const bullets = []; // { x (world, left edge), y, dir, el }
+let ePrompt = null;
+let nextAmmoChunk = 0;
+let cheatArmed = false;
+
+function idleSprite() {
+return player.hasGun ? activeChar.sprites.gunIdle : PLAYER_IDLE;
+}
+
+function addPickup(kind, x, y) {
+const el = document.createElement('img');
+el.className = kind === 'glock' ? 'glock-item' : kind === 'bandage' ? 'bandage-item' : 'ammo-item';
+el.src = kind === 'glock' ? GLOCK_SRC : kind === 'bandage' ? 'items/bandages.png' : AMMO_SRC;
+el.alt = kind === 'glock' ? 'Glock 19' : kind === 'bandage' ? 'Bandages' : 'Ammunition';
+el.draggable = false;
+el.style.left = `${x - worldOffset}px`;
+el.style.top = `${y}px`;
+itemContainer.appendChild(el);
+pickups.push({ kind, x, y, el });
+}
+
+function setupGunForRun() {
+const forced = cheatArmed; // up, up, down on the select screen
+cheatArmed = false;
+
+bullets.forEach(b => b.el.remove());
+bullets.length = 0;
+pickups.forEach(p => p.el.remove());
+pickups.length = 0;
+if (ePrompt) { ePrompt.remove(); ePrompt = null; }
+player.isReloading = false;
+player.reloadLeft = 0;
+nextAmmoChunk = 0;
+
+// E key prompt (pixel-art keycap), shown only when you're near something you can pick up.
+ePrompt = document.createElement('div');
+ePrompt.className = 'e-prompt';
+ePrompt.innerHTML =
+'<svg viewBox="0 0 12 12" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">' +
+'<rect x="0" y="0" width="12" height="12" fill="#0b0b0d"/>' +
+'<rect x="1" y="1" width="10" height="9" fill="#f2f2f2"/>' +
+'<rect x="1" y="10" width="10" height="1" fill="#8a8a92"/>' +
+'<rect x="4" y="2" width="1" height="7" fill="#0b0b0d"/>' +
+'<rect x="4" y="2" width="4" height="1" fill="#0b0b0d"/>' +
+'<rect x="4" y="5" width="3" height="1" fill="#0b0b0d"/>' +
+'<rect x="4" y="8" width="4" height="1" fill="#0b0b0d"/>' +
+'</svg>';
+itemContainer.appendChild(ePrompt);
+
+player.hasGun = !!activeChar.stats.startsWithGun;
+player.ammo = { mag: MAX_MAG, reloads: MAX_RELOADS };
+playerSprite.src = idleSprite();
+
+if (!player.hasGun && (forced || Math.random() < GLOCK_SPAWN_CHANCE)) {
+// Somewhere on the visible ground, ahead of the player.
+const minX = player.x + worldOffset + 200;
+let maxX = worldOffset + window.innerWidth - 200;
+if (maxX < minX + 50) maxX = minX + 50;
+const x = minX + Math.random() * (maxX - minX);
+const y = 110 + Math.random() * Math.max(60, window.innerHeight - 330);
+addPickup('glock', x, y);
+}
+updateAmmoHud();
+}
+
+// ---------- pickups (glock + ammo) ----------
+function pickupSize(p) {
+if (p.kind === 'bandage') return { w: 42, h: 42 };
+return {
+w: p.el.offsetWidth || (p.kind === 'glock' ? GLOCK_WIDTH : AMMO_WIDTH),
+h: p.el.offsetHeight || (p.kind === 'glock' ? 44 : 36)
+};
+}
+
+function pickupEligible(p) {
+if (p.kind === 'glock') return !player.hasGun;
+if (p.kind === 'bandage') return player.health < player.maxHealth;
+return player.hasGun && !hasInfiniteAmmo() &&
+(player.ammo.mag < MAX_MAG || player.ammo.reloads < MAX_RELOADS);
+}
+
+function nearestPickup() {
+if (player.dead || player.isReloading) return null;
+const pBox = getPlayerHitbox();
+const feetY = pBox.y + pBox.h - 10;
+let best = null, bestD = PICKUP_RANGE;
+for (const p of pickups) {
+if (!pickupEligible(p)) continue;
+const { w, h } = pickupSize(p);
+const d = Math.hypot((pBox.x + pBox.w / 2) - (p.x + w / 2), feetY - (p.y + h / 2));
+if (d < bestD) { bestD = d; best = p; }
+}
+return best;
+}
+
+function rollAmmoChunk(idx) {
+if (hasInfiniteAmmo()) return;
+if (Math.random() >= AMMO_CHUNK_CHANCE) return;
+const W = window.innerWidth;
+const x = idx * W + 140 + Math.random() * Math.max(60, W - 340);
+const y = 110 + Math.random() * Math.max(60, window.innerHeight - 330);
+addPickup('ammo', x, y);
+}
+
+function updatePickups() {
+// One 30% roll for each screen-width of world as it comes into reach.
+const playerWorldX = player.x + worldOffset;
+while (nextAmmoChunk * window.innerWidth <= playerWorldX + window.innerWidth) {
+rollAmmoChunk(nextAmmoChunk++);
+}
+
+for (let i = pickups.length - 1; i >= 0; i--) {
+const p = pickups[i];
+const screenX = p.x - worldOffset;
+if (screenX < -400) { p.el.remove(); pickups.splice(i, 1); continue; }
+p.el.style.left = `${screenX}px`;
+}
+
+const target = nearestPickup();
+if (ePrompt) {
+if (target) {
+const { w } = pickupSize(target);
+ePrompt.style.display = 'block';
+ePrompt.style.left = `${target.x - worldOffset + w / 2 - 18}px`;
+ePrompt.style.top = `${target.y - 44}px`;
+} else {
+ePrompt.style.display = 'none';
+}
+}
+}
+
+function collectPickup(p) {
+if (p.kind === 'bandage') {
+player.health = Math.min(player.maxHealth, player.health + 50);
+updateHealthBar();
+showHealingEffect();
+} else if (p.kind === 'glock') {
+player.hasGun = true;
+// Only characters who START with a gun get a full one; a found glock is never full.
+player.ammo = { mag: randInt(3, 9), reloads: randInt(0, 5) };
+if (!player.isMoving && !player.isCharging && !player.isAttacking) {
+playerSprite.src = activeChar.sprites.gunIdle;
+}
+} else {
+player.ammo.mag = Math.min(MAX_MAG, player.ammo.mag + randInt(5, 10));
+player.ammo.reloads = Math.min(MAX_RELOADS, player.ammo.reloads + randInt(1, 6));
+}
+p.el.remove();
+pickups.splice(pickups.indexOf(p), 1);
+updateAmmoHud();
+}
+
+// ---------- reload ----------
+function setReloadFrame(idx) {
+const src = activeChar.sprites.reload[idx];
+playerSprite.src = (src && !missingSprites.has(src)) ? src : idleSprite();
+}
+
+function startReload() {
+player.isReloading = true;
+player.reloadLeft = RELOAD_TIME;
+player.reloadFrame = 0;
+player.isMoving = false;
+player.frame = 0;
+player.timer = 0;
+setReloadFrame(0);
+}
+
+function updateReload(dt) {
+if (!player.isReloading) return;
+if (player.dead) { player.isReloading = false; return; }
+player.reloadLeft -= dt;
+if (player.reloadLeft <= 0) {
+player.isReloading = false;
+player.ammo.mag = MAX_MAG;
+
+// Only consume a reload if the character doesn't have infinite ammo.
+if (!hasInfiniteAmmo()) {
+    player.ammo.reloads--;
+}
+
+playerSprite.src = idleSprite();
+updateAmmoHud();
+return;
+}
+// Spread the 11 frames evenly across the whole reload time
+const progress = 1 - player.reloadLeft / RELOAD_TIME;
+const idx = Math.min(RELOAD_FRAME_COUNT - 1, Math.floor(progress * RELOAD_FRAME_COUNT));
+if (idx !== player.reloadFrame) {
+player.reloadFrame = idx;
+setReloadFrame(idx);
+}
+}
+
+window.addEventListener('keydown', (e) => {
+if (e.repeat || isPaused || isRoundShopOpen || !e.key) return;
+if (!gameEl.classList.contains('active') || player.dead) return;
+const k = e.key.toLowerCase();
+
+if (k === 'e') {
+const target = nearestPickup();
+if (target) collectPickup(target);
+} else if (k === 'r') {
+if (!player.hasGun) return;
+if (player.isReloading || player.isCharging || player.isAttacking) return;
+
+// Infinite-ammo characters can reload whenever they want.
+if (!hasInfiniteAmmo()) {
+    if (player.ammo.mag > 0 || player.ammo.reloads <= 0) return;
+}
+
+startReload();
+}
+});
+
+// ---------- cheat: Up, Up, Down on the character select screen ----------
+const cheatBuffer = [];
+document.addEventListener('keydown', (e) => {
+if (!inSelect || isConfirming || e.repeat) return;
+if (!e.key.startsWith('Arrow')) return;
+cheatBuffer.push(e.key);
+if (cheatBuffer.length > 3) cheatBuffer.shift();
+if (cheatBuffer.join() === 'ArrowUp,ArrowUp,ArrowDown') {
+cheatArmed = true;
+cheatBuffer.length = 0;
+}
+});
+
+// ---------- shooting ----------
+const SHOOT_COOLDOWN_MS = 110;
+let lastShotTime = 0;
+
+function playGlockShot() {
+// Clone so rapid shots can overlap instead of cutting each other off
+const snd = glockShotAudio.cloneNode();
+snd.volume = BASE_GLOCK_VOL * masterVolume;
+snd.play().catch(() => {});
+}
+
+function fireGun() {
+if (!player.hasGun || player.dead || isPaused || player.isReloading || player.isShooting) return;
+if (!gameEl.classList.contains('active')) return;
+if (performance.now() - lastShotTime < SHOOT_COOLDOWN_MS) return;
+
+// If walking, plant your feet first, then shoot, then you can move again
+if (player.isMoving) {
+player.isShooting = true;
+player.isMoving = false;
+player.frame = 0;
+player.timer = 0;
+playerSprite.src = idleSprite();
+setTimeout(() => {
+player.isShooting = false;
+if (!player.dead && !isPaused) shootBullet();
+}, 150);
+return;
+}
+shootBullet();
+}
+
+function shootBullet() {
+if (!player.hasGun || player.dead || isPaused || player.isReloading) return;
+if (!gameEl.classList.contains('active')) return;
+if (!hasInfiniteAmmo()) {
+if (player.ammo.mag <= 0) return;
+player.ammo.mag--;
+updateAmmoHud();
+}
+
+lastShotTime = performance.now();
+playGlockShot();
+
+const s = (playerWrapper.offsetWidth || 140) / 140;
+const facingRight = player.facing === 'right';
+const worldLeft = player.x + worldOffset;
+const x = facingRight
+? worldLeft + MUZZLE_X * s
+: worldLeft + (140 - MUZZLE_X) * s - BULLET_W;
+const y = player.y + MUZZLE_Y * s - BULLET_H / 2;
+
+const el = document.createElement('div');
+el.className = 'bullet';
+el.style.left = `${x - worldOffset}px`;
+el.style.top = `${y}px`;
+itemContainer.appendChild(el);
+bullets.push({ x, y, dir: facingRight ? 1 : -1, el });
+}
+
+gameEl.addEventListener('mousedown', (e) => {
+if (e.button !== 0) return;
+fireGun();
+});
+
+function damageZombieWithBullet(z, damage, dir) {
+z.hp = Math.max(0, z.hp - damage);
+z.knockbackX += dir * 18;
+createBlood(z.x - worldOffset + 70, z.y + 70);
+if (z.hp <= 0 && !z.isDying) {
+z.isDying = true;
+player.kills++;
+if (Math.random() < 0.07) {
+spawnBandageAtWorld(z.x, z.y + 42);
+}
+const dropCount = 1 + Math.floor(Math.random() * 3);
+for (let c = 0; c < dropCount; c++) {
+const ox = (Math.random() - 0.5) * 56;
+const oy = (Math.random() - 0.25) * 40;
+spawnCoinAtWorld(z.x + ox, z.y + 40 + oy);
+}
+z.img.src = ZOMBIE_IDLE;
+z.el.classList.add('dying');
+z.el.style.top = `${z.y + 200}px`;
+z.el.style.opacity = '0';
+setTimeout(() => z.el.remove(), 900);
+}
+}
+
+function updateBullets(dt) {
+for (let i = bullets.length - 1; i >= 0; i--) {
+const b = bullets[i];
+const step = b.dir * BULLET_SPEED * dt;
+const prevX = b.x;
+b.x += step;
+
+// Swept box (previous position -> new position) so a fast bullet can't skip over a zombie.
+const sweep = {
+x: Math.min(prevX, b.x),
+y: b.y,
+w: Math.abs(step) + BULLET_W,
+h: BULLET_H
+};
+
+let hit = null;
+let hitDist = Infinity;
+for (const z of zombies) {
+if (z.isDying) continue;
+const zBox = getZombieHitbox(z);
+if (!aabbOverlap(sweep, zBox)) continue;
+const d = b.dir > 0 ? zBox.x - prevX : (prevX + BULLET_W) - (zBox.x + zBox.w);
+if (d < hitDist) { hitDist = d; hit = z; }
+}
+
+if (hit) {
+damageZombieWithBullet(hit, BULLET_DAMAGE, b.dir);
+b.el.remove();
+bullets.splice(i, 1);
+continue;
+}
+
+const screenX = b.x - worldOffset;
+if (screenX > window.innerWidth || screenX + BULLET_W < 0) {
+b.el.remove();
+bullets.splice(i, 1);
+continue;
+}
+b.el.style.left = `${screenX}px`;
+}
+}
+
+updateAmmoHud();
+updateGame(performance.now());
+updateSelection();
+</script>
+</body>
+</html>
