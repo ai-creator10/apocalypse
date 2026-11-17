@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:,">
 <title>APOCALYPSE</title>
 <link href="https://fonts.cdnfonts.com/css/dead-kansas" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
@@ -342,6 +343,19 @@ background: #6d5a44;
 z-index: 100;
 overflow: hidden;
 }
+
+/* Explicit world layers: scenery < barricades < zombies < player < pickups. */
+#envContainer, #zombieContainer, #itemContainer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+#envContainer { z-index: 6; }
+#barricadeContainer { position:absolute; inset:0; width:100%; height:100%; z-index:7; pointer-events:none; }
+#zombieContainer { z-index: 8; }
+#itemContainer { z-index: 30; }
 
 .grass {
 position: absolute;
@@ -1097,6 +1111,8 @@ filter: drop-shadow(2px 3px 0 rgba(0,0,0,.35));
   max-width:86%; max-height:112px; width:auto; height:auto; object-fit:contain;
   image-rendering:pixelated; image-rendering:crisp-edges; filter:drop-shadow(3px 4px 0 rgba(0,0,0,.55));
 }
+/* The barricade art is a wide 2:1 image, so give it enough room to read clearly. */
+.shop-card-image.barricade-shop-image { width:280px; max-width:100%; height:132px; max-height:132px; object-fit:contain; }
 .shop-card-title {
   min-height:32px; font-family:'Dead Kansas','Oswald',sans-serif; font-size:22px;
   letter-spacing:1.5px; text-transform:uppercase; color:#f3f0e8;
@@ -1127,6 +1143,7 @@ filter: drop-shadow(2px 3px 0 rgba(0,0,0,.35));
   .shop-card { min-height:300px; padding:10px 7px; }
   .shop-card-image-wrap { height:90px; }
   .shop-card-image { max-height:78px; max-width:95%; }
+  .shop-card-image.barricade-shop-image { width:190px; height:88px; max-height:88px; }
   .shop-card-title { font-size:16px; min-height:38px; }
   .shop-card-description { font-size:11px; min-height:62px; }
   .shop-buy-btn { font-size:13px; gap:4px; }
@@ -1227,6 +1244,29 @@ filter: drop-shadow(2px 3px 0 rgba(0,0,0,.35));
   text-transform: uppercase;
 }
 
+
+/* Weather, radio warning and barricade construction */
+#weatherOverlay{position:absolute;inset:0;z-index:18;pointer-events:none;opacity:0;transition:opacity .8s ease;overflow:hidden}
+#weatherOverlay.rain{opacity:1;background:repeating-linear-gradient(108deg,transparent 0 18px,rgba(190,210,230,.22) 19px,transparent 21px 34px);animation:rainDrift .32s linear infinite}
+#weatherOverlay.fog{opacity:1;background:radial-gradient(ellipse at 50% 55%,rgba(205,211,205,.30),rgba(180,190,190,.12) 55%,transparent 90%)}
+#weatherOverlay.storm{opacity:1;background:repeating-linear-gradient(108deg,transparent 0 20px,rgba(190,205,225,.22) 21px,transparent 23px 37px);animation:rainDrift .28s linear infinite}
+#weatherOverlay.storm.flash{background-color:rgba(220,230,255,.28)}
+#weatherOverlay.clear{opacity:0}
+@keyframes rainDrift{from{background-position:0 0}to{background-position:-45px 110px}}
+#radioWarning{position:fixed;inset:0;z-index:1500;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.76);opacity:0;visibility:hidden;transition:opacity .55s ease,visibility .55s ease;pointer-events:none;padding:24px}
+#radioWarning.active{opacity:1;visibility:visible}
+#radioWarning .radio-panel{width:min(680px,92vw);padding:26px 30px;background:rgba(8,10,13,.96);border:2px solid #aeb7c2;box-shadow:0 0 0 5px rgba(0,0,0,.85),0 0 45px rgba(180,200,220,.14);color:#f1f1f1;text-align:center}
+#radioWarning .radio-label{font:normal 15px 'Oswald',sans-serif;letter-spacing:5px;color:#aeb7c2;margin-bottom:15px;text-transform:uppercase}
+#radioWarning .radio-message{font:500 clamp(18px,2.5vw,25px) 'Oswald',sans-serif;line-height:1.55;letter-spacing:1px;text-shadow:2px 2px #000}
+#barricadeHud{position:absolute;right:142px;bottom:20px;z-index:75;display:flex;align-items:center;gap:12px;color:#fff;font:700 30px 'Oswald',sans-serif;letter-spacing:1px;text-shadow:3px 3px 0 #000,-1px -1px 0 #000;pointer-events:none;min-height:58px;padding:5px 12px;background:rgba(0,0,0,.58);border:2px solid rgba(255,255,255,.35);box-shadow:3px 3px 0 rgba(0,0,0,.8)}
+#barricadeHud img{width:88px;height:48px;object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges}
+#barricadeHud span{min-width:38px;font-size:32px;line-height:1;text-align:center}
+.supply-crate-item{position:absolute;display:block;width:62px;height:62px;object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges;z-index:9;pointer-events:none;filter:drop-shadow(2px 3px 0 rgba(0,0,0,.45))}
+#barricadePreview{position:absolute;z-index:45;display:none;width:220px;height:100px;object-fit:contain;pointer-events:none;opacity:.52;filter:sepia(1) saturate(5) hue-rotate(65deg) brightness(1.15);image-rendering:pixelated;image-rendering:crisp-edges;transform:translate(-50%,-50%)}
+.barricade-world{position:absolute;width:220px;height:100px;object-fit:contain;pointer-events:none;image-rendering:pixelated;image-rendering:crisp-edges;transform:translate(-50%,-50%);filter:drop-shadow(2px 3px 0 rgba(0,0,0,.4))}
+#game.barricade-mode{cursor:crosshair}
+#game.barricade-mode #ammoHud{opacity:.42}
+
 </style>
 </head>
 <body>
@@ -1288,8 +1328,9 @@ filter: drop-shadow(2px 3px 0 rgba(0,0,0,.35));
 <div class="grass left"></div>
 <div class="grass right"></div>
 <div class="day-night-overlay" id="dayNightOverlay"></div>
+<div id="weatherOverlay" class="clear" aria-hidden="true"></div>
 <div id="envContainer"></div>
-
+<div id="barricadeContainer" aria-hidden="true"></div>
 <div id="zombieContainer"></div>
 <div id="itemContainer"></div>
 <canvas id="hitboxCanvas" aria-hidden="true"></canvas>
@@ -1299,6 +1340,8 @@ filter: drop-shadow(2px 3px 0 rgba(0,0,0,.35));
 <div class="coin-hud" id="coinHud"><img src="items/coins.png" alt="Coins"><span id="coinHudCount">0</span></div>
 <div class="radiation-hud" id="radiationHud"><img src="items/nuclear_symbol.png" alt="Radiation"><span id="radiationPercent">0%</span></div>
 <div id="boostHud" aria-label="Active boosts"></div>
+<div id="barricadeHud"><img src="items/barricades.png" alt="Barricades"><span id="barricadeCount">0</span></div>
+<img id="barricadePreview" src="items/barricades.png" alt="">
 <div class="adrenaline-overlay" id="adrenalineOverlay"></div>
 <div class="radiation-overlay" id="radiationOverlay"></div>
 <div class="heal-flash" id="healFlash"></div>
@@ -1312,6 +1355,7 @@ filter: drop-shadow(2px 3px 0 rgba(0,0,0,.35));
 <div class="health-text" id="healthText">100/100</div>
 </div>
 </section>
+<div id="radioWarning" aria-hidden="true"><div class="radio-panel"><div class="radio-label">INCOMING TRANSMISSION</div><div class="radio-message" id="radioMessage"></div></div></div>
 
 <div class="round-shop-overlay" id="roundShopOverlay" aria-hidden="true">
   <div class="round-shop-panel">
@@ -1477,6 +1521,7 @@ speedMult: 1.015, // 1.5% faster than normal
 meleeMult: 1.5, // melee does 1.5x damage
 damageTakenMult: 1.5, // takes 1.5x damage from zombies
 maxHealth: 100,
+barricadeCapacity: 75, // Ash can carry extra barricades
 zombieSpeedMult: 1,
 startsWithGun: false,
 infiniteAmmo: false
@@ -1499,6 +1544,7 @@ speedMult: 1,
 meleeMult: 1,
 damageTakenMult: 1,
 maxHealth: 80,
+barricadeCapacity: 50,
 zombieSpeedMult: 1.25, // zombies are faster even in the day (night bonus still stacks on top)
 startsWithGun: true,
 infiniteAmmo: true
@@ -1564,6 +1610,7 @@ const playerSprite = document.getElementById('playerSprite');
 const pixelOverlay = document.getElementById('pixelOverlay');
 const dirtField = document.getElementById('dirtField');
 const zombieContainer = document.getElementById('zombieContainer');
+const barricadeContainer = document.getElementById('barricadeContainer');
 const itemContainer = document.getElementById('itemContainer');
 const bloodContainer = document.getElementById('bloodContainer');
 const waveDisplay = document.getElementById('waveDisplay');
@@ -1581,6 +1628,12 @@ const coinHudCount = document.getElementById('coinHudCount');
 const radiationHud = document.getElementById('radiationHud');
 const radiationPercent = document.getElementById('radiationPercent');
 const boostHud = document.getElementById('boostHud');
+const weatherOverlay = document.getElementById('weatherOverlay');
+const barricadeHud = document.getElementById('barricadeHud');
+const barricadeCountEl = document.getElementById('barricadeCount');
+const barricadePreview = document.getElementById('barricadePreview');
+const radioWarning = document.getElementById('radioWarning');
+const radioMessage = document.getElementById('radioMessage');
 const radiationOverlay = document.getElementById('radiationOverlay');
 const roundShopOverlay = document.getElementById('roundShopOverlay');
 const roundShopCards = document.getElementById('roundShopCards');
@@ -1615,6 +1668,7 @@ let tutorialTypingTimer = null;
 let tutorialFullLine = '';
 let tutorialTypeIndex = 0;
 let tutorialNextAction = null;
+let tutorialActionTimer = null;
 try { tutorialCompleted = localStorage.getItem('apocalypseTutorialComplete') === 'true'; } catch (_) {}
 
 // Environment props (permanent for the run)
@@ -2224,7 +2278,11 @@ playerSprite.src = PLAYER_IDLE;
 updateHealthBar();
 
 worldOffset = 0;
-
+barricades.forEach(b => b.el.remove()); barricades.length = 0;
+barricadeContainer.innerHTML = '';
+barricadeInventory = 0; barricadeMode = false; updateBarricadeHud();
+barricadePreview.style.display = "none"; gameEl.classList.remove("barricade-mode");
+radioWarningOpen = false; radioWarning.classList.remove("active");
 cycleElapsed = 0;
 isNight = false;
 dayNightOverlay.classList.remove('night');
@@ -2232,6 +2290,7 @@ dayNightOverlay.style.opacity = '1';
 timeIndicator.textContent = 'Day';
 
 zombieContainer.innerHTML = "";
+barricadeContainer.innerHTML = "";
 itemContainer.innerHTML = "";
 bloodContainer.innerHTML = "";
 envContainer.innerHTML = "";
@@ -2244,6 +2303,8 @@ nextCarSpawnWorldX = 0;
 nextPropSpawnWorldX = 0;
 nextRadiationChunk = 0;
 currentWave = 1;
+hordeActive = false;
+nextRadioWave = currentWave + randInt(1, 10);
 waveAdvancePending = false;
 lastAmbientBandageCheck = performance.now();
 lastAmbientCoinCheck = performance.now();
@@ -2263,7 +2324,15 @@ if (tutorialActive) {
   player.hasGun = false;
   player.ammo = { mag: 0, reloads: 0 };
   playerSprite.src = idleSprite();
-  pickups.forEach(p => p.el.remove()); pickups.length = 0;
+  // Keep the two explicit cheat-test crates visible during the tutorial.
+  // Remove the cheat Glock so the tutorial can still introduce its own Glock.
+  for (let i = pickups.length - 1; i >= 0; i--) {
+    const p = pickups[i];
+    if (p.kind !== 'crateAmmo' && p.kind !== 'crateBarricades') {
+      p.el.remove();
+      pickups.splice(i, 1);
+    }
+  }
   bullets.forEach(b => b.el.remove()); bullets.length = 0;
   updateAmmoHud();
 }
@@ -2335,8 +2404,21 @@ let lastAmbientBandageCheck = 0;
 let lastAmbientCoinCheck = 0;
 let radiationLevel = 0;
 let radiationDeathStarted = false;
+let barricades = [];
+let barricadeInventory = 0;
+let barricadeMode = false;
+const DEFAULT_BARRICADE_CAPACITY = 50;
+let hordeActive = false;
+let barricadeMouse = { x: 0, y: 0 };
+let nextRadioWave = 1;
+let radioWarningOpen = false;
+let stormFlashTimer = null;
+const BARRICADE_SRC = "items/barricades.png";
+const BROWN_CRATE_SRC = "items/crate.png";
+const BLUE_CRATE_SRC = "items/crate_2.png";
+[BARRICADE_SRC, BROWN_CRATE_SRC, BLUE_CRATE_SRC].forEach(src => { const img = new Image(); img.src = src; });
 
-function spawnZombie(x, y, wave = currentWave) {
+function spawnZombie(x, y, wave = currentWave, isHorde = false) {
 const el = document.createElement('div');
 el.className = 'zombie-wrapper';
 el.style.left = `${x}px`;
@@ -2349,7 +2431,7 @@ img.src = ZOMBIE_IDLE;
 el.appendChild(img);
 zombieContainer.appendChild(el);
 
-const baseSpeed = Math.min(4.65, 2.45 + (wave - 1) * 0.16);
+const baseSpeed = isHorde ? Math.min(8.5, (2.45 + (wave - 1) * 0.16) * 2.5) : Math.min(4.65, 2.45 + (wave - 1) * 0.16);
 const zombie = {
 el: el,
 img: img,
@@ -2367,7 +2449,8 @@ knockbackX: 0,
 knockbackY: 0,
 tutorialIdle: false,
 tutorialNoDamage: false,
-tutorialTarget: false
+tutorialTarget: false,
+ horde: isHorde
 };
 zombies.push(zombie);
 return zombie;
@@ -2375,6 +2458,7 @@ return zombie;
 
 function spawnWave(wave) {
 waveDisplay.textContent = `Wave: ${wave}`;
+setRandomWeather();
 const count = 3 + wave;
 const playerWorldX = player.x + worldOffset;
 const startX = playerWorldX + Math.max(520, window.innerWidth * 0.58);
@@ -2812,6 +2896,8 @@ if (currentTime >= adrenalineUntil && gameEl.classList.contains('adrenaline-acti
   player.speed = 4.2 * activeChar.stats.speedMult;
 }
 updateBoostHud(currentTime);
+if (!tutorialActive && !isPaused && !isRoundShopOpen && !player.dead && currentWave >= nextRadioWave && !radioWarningOpen) showRadioWarning();
+updateBarricadePreview();
 
 // Keep the loop alive while paused, but freeze simulation
 if (isPaused || isRoundShopOpen || radiationDeathStarted) {
@@ -2912,6 +2998,9 @@ playerWrapper.style.top = `${player.y}px`;
 dirtField.style.backgroundPositionX = `${-worldOffset}px`;
 }
 
+// Barricades store world X coordinates; only their screen projection changes as the camera scrolls.
+updateBarricadePositions();
+
 const shouldPlayFootsteps =
 gameEl.classList.contains('active') &&
 !player.dead &&
@@ -2970,22 +3059,33 @@ let moved = false;
 // Stop when rectangles nearly touch (small separation gap)
 const stopDist = (BODY_HIT_W + BODY_HIT_H) * 0.22;
 
-if (dist > stopDist && dist < detectionRange) {
+if (dist > stopDist && (z.horde || dist < detectionRange)) {
 z.facing = distX > 0 ? 'right' : 'left';
 
 const speedPerSecond = z.speed * 60;
 const step = Math.min(speedPerSecond * dt, dist - stopDist);
-z.x += (distX / dist) * step;
-z.y += (distY / dist) * step;
-moved = step > 0;
+const proposedX = z.x + (distX / dist) * step;
+const proposedY = z.y + (distY / dist) * step;
+const blockingBarricade = getBlockingBarricade(getZombieHitboxAt(proposedX, proposedY));
+if (!blockingBarricade) {
+  z.x = proposedX; z.y = proposedY; z.barricadeRoute = null; moved = step > 0;
+} else {
+  moved = moveZombieAroundBarricade(z, proposedX, proposedY, step, blockingBarricade);
+}
 }
 
 if (Math.abs(z.knockbackX) > 0.1 || Math.abs(z.knockbackY) > 0.1) {
-z.x += z.knockbackX;
-z.y += z.knockbackY;
-z.knockbackX *= 0.72;
-z.knockbackY *= 0.72;
-moved = true;
+  const knockX = z.x + z.knockbackX;
+  const knockY = z.y + z.knockbackY;
+  if (!collidesWithBarricade(getZombieHitboxAt(knockX, knockY))) {
+    z.x = knockX; z.y = knockY; moved = true;
+  } else {
+    // Resolve knockback per axis so an obstacle stops the zombie instead of being crossed.
+    if (!collidesWithBarricade(getZombieHitboxAt(knockX, z.y))) { z.x = knockX; moved = true; }
+    if (!collidesWithBarricade(getZombieHitboxAt(z.x, knockY))) { z.y = knockY; moved = true; }
+  }
+  z.knockbackX *= 0.72;
+  z.knockbackY *= 0.72;
 }
 
 // Damage uses rectangle overlap. Zombies can hit you while charging (holding space).
@@ -3122,7 +3222,8 @@ const SHOP_CATALOGUE = [
   { id:'medkit', title:'Medkit', description:'Heal by 100 health.', image:'items/medkit.png', price:75, weight:1.0 },
   { id:'adrenaline', title:'Adrenalin', description:'Get a burst of energy for 15 seconds.', image:'items/adrenalin_needle.png', price:110, weight:0.9 },
   { id:'drugs', title:'Drugs', description:'Reduces your radiation poisoning.', image:'items/drugs.png', price:85, weight:0.9 },
-  { id:'infiniteAmmo', title:'Infinite Ammunition', description:'Get infinite ammunition for 5 minutes.', image:'guns/ammo/glock_ammo.png', price:285, weight:0.55 }
+  { id:'infiniteAmmo', title:'Infinite Ammunition', description:'Get infinite ammunition for 5 minutes.', image:'guns/ammo/glock_ammo.png', price:285, weight:0.55 },
+  { id:'barricades', title:'15 Barricades', description:'Add 15 barricades to your inventory.', image:'items/barricades.png', price:90, weight:0.85 }
 ];
 
 function hasInfiniteAmmo() {
@@ -3196,6 +3297,7 @@ function buildShopOfferPool() {
 function openRoundShop() {
   if (player.dead || isRoundShopOpen) return;
   isRoundShopOpen = true;
+  barricadeMode = false; gameEl.classList.remove('barricade-mode'); barricadePreview.style.display = 'none';
   shopBoughtSomething = false;
   footstepsAudio.pause();
   updateCoinHud();
@@ -3205,6 +3307,17 @@ function openRoundShop() {
   shopSubtitle.textContent = `Wave ${currentWave} cleared — spend your coins`;
   const pool = buildShopOfferPool();
   currentShopOffers = [];
+  const barricadeOffer = pool.find(item => item.id === 'barricades') || {
+    id: 'barricades',
+    title: '15 Barricades',
+    description: 'Add 15 barricades to your inventory.',
+    image: 'items/barricades.png',
+    price: 90,
+    weight: 1
+  };
+  currentShopOffers.push({...barricadeOffer});
+  const catalogueBarricadeIndex = pool.findIndex(item => item.id === 'barricades');
+  if (catalogueBarricadeIndex !== -1) pool.splice(catalogueBarricadeIndex, 1);
   while (currentShopOffers.length < 3 && pool.length) {
     const total = pool.reduce((sum, item) => sum + item.weight, 0);
     let roll = Math.random() * total;
@@ -3227,15 +3340,27 @@ function openRoundShop() {
 }
 function renderRoundShop() {
   roundShopCards.innerHTML = '';
+  // Final guard at the rendering boundary: the barricade offer must always
+  // exist in the visible cards, regardless of how the offer pool was built.
+  if (!currentShopOffers.some(item => item && item.id === 'barricades')) {
+    currentShopOffers.unshift({
+      id: 'barricades', title: '15 Barricades',
+      description: 'Add 15 barricades to your inventory.',
+      image: 'items/barricades.png', price: 90, weight: 1
+    });
+  }
+  currentShopOffers = currentShopOffers.slice(0, 3);
   currentShopOffers.forEach((offer, index) => {
     const card = document.createElement('article');
     card.className = 'shop-card';
+    card.dataset.offerId = offer.id;
     const imageWrap = document.createElement('div');
     imageWrap.className = 'shop-card-image-wrap';
     const image = document.createElement('img');
     image.className = 'shop-card-image';
     image.src = offer.image;
     image.alt = offer.title;
+    if (offer.id === 'barricades') image.classList.add('barricade-shop-image');
     image.draggable = false;
     imageWrap.appendChild(image);
     const title = document.createElement('div');
@@ -3271,6 +3396,7 @@ function purchaseShopOffer(index) {
   if (offer.id === 'doubleCoins') {
     doubleCoinsUntil = Math.max(performance.now(), doubleCoinsUntil) + 5 * 60 * 1000;
   } else if (offer.id === 'glock19') {
+    if (player.hasGun) { player.coins += offer.price; offer.sold = false; renderRoundShop(); return; }
     player.hasGun = true;
     player.ammo = { mag: MAX_MAG, reloads: MAX_RELOADS };
     player.isReloading = false;
@@ -3293,6 +3419,9 @@ function purchaseShopOffer(index) {
   } else if (offer.id === 'infiniteAmmo') {
     infiniteAmmoUntil = Math.max(performance.now(), infiniteAmmoUntil) + 5 * 60 * 1000;
     updateAmmoHud();
+  } else if (offer.id === 'barricades') {
+    barricadeInventory = Math.min(getBarricadeCapacity(), barricadeInventory + 15);
+    updateBarricadeHud();
   }
   updateBoostHud();
   renderRoundShop();
@@ -3321,6 +3450,11 @@ function closeRoundShop() {
     roundShopOverlay.classList.remove('active');
     roundShopOverlay.setAttribute('aria-hidden','true');
     currentWave++;
+    // Barricades protect only the wave in which they were placed.
+    barricades.forEach(b => b.el.remove()); barricades.length = 0;
+    barricadeContainer.innerHTML = '';
+    barricadeMode = false; barricadePreview.style.display = "none"; gameEl.classList.remove("barricade-mode");
+    // Keep the existing radio-warning target; rerolling here postpones it forever.
     waveDisplay.textContent = `Wave: ${currentWave}`;
     zombies.length = 0;
     zombieContainer.innerHTML = '';
@@ -3363,6 +3497,12 @@ pointer-events: none;
 filter: drop-shadow(2px 3px 0 rgba(0,0,0,.45));
 }
 .glock-item { width: ${GLOCK_WIDTH}px; }
+.supply-crate-item { position:absolute; display:flex; align-items:center; justify-content:center; box-sizing:border-box; width:82px; height:76px; z-index:30; pointer-events:none; overflow:visible; filter:drop-shadow(2px 3px 0 rgba(0,0,0,.55)); }
+.supply-crate-art { display:block; width:100%; height:100%; object-fit:contain; image-rendering:pixelated; image-rendering:crisp-edges; }
+.supply-crate-fallback { display:none; width:100%; height:100%; box-sizing:border-box; align-items:center; justify-content:center; flex-direction:column; border:4px solid #17130e; outline:2px solid #e5d6a7; background:repeating-linear-gradient(0deg,#79502b 0 9px,#9a6b39 9px 17px); color:#fff4cf; font:900 10px/1.1 monospace; letter-spacing:1px; text-align:center; text-shadow:2px 2px #24170d; }
+.supply-crate-fallback::before { content:''; display:block; width:calc(100% - 8px); height:8px; margin-bottom:7px; background:#d4b477; border:2px solid #2a1b0e; box-sizing:border-box; }
+.supply-crate-item.ammo-crate .supply-crate-fallback { background:repeating-linear-gradient(0deg,#174c83 0 9px,#2368a5 9px 17px); }
+.supply-crate-item.barricade-crate .supply-crate-fallback { background:repeating-linear-gradient(0deg,#79502b 0 9px,#9a6b39 9px 17px); }
 .ammo-item { width: ${AMMO_WIDTH}px; }
 .e-prompt {
 position: absolute;
@@ -3474,15 +3614,53 @@ return player.hasGun ? activeChar.sprites.gunIdle : PLAYER_IDLE;
 }
 
 function addPickup(kind, x, y) {
-const el = document.createElement('img');
-el.className = kind === 'glock' ? 'glock-item' : kind === 'bandage' ? 'bandage-item' : 'ammo-item';
-el.src = kind === 'glock' ? GLOCK_SRC : kind === 'bandage' ? 'items/bandages.png' : AMMO_SRC;
-el.alt = kind === 'glock' ? 'Glock 19' : kind === 'bandage' ? 'Bandages' : 'Ammunition';
-el.draggable = false;
+const isAmmoCrate = kind === 'crateAmmo';
+const isBarricadeCrate = kind === 'crateBarricades';
+let el;
+if (isAmmoCrate || isBarricadeCrate) {
+  // Render a guaranteed visible crate face with INLINE styles. This deliberately
+  // does not depend on an external PNG, a stylesheet class, or an image error event.
+  // The source image is layered over the fallback only when it actually has pixels.
+  el = document.createElement('div');
+  el.className = `supply-crate-item ${isAmmoCrate ? 'ammo-crate' : 'barricade-crate'}`;
+  el.style.cssText = [
+    'position:absolute','display:block','box-sizing:border-box','width:88px','height:78px',
+    'z-index:9999','pointer-events:none','overflow:hidden','border:4px solid #17130e',
+    'outline:3px solid #e5d6a7','box-shadow:4px 5px 0 rgba(0,0,0,.55)',
+    `background:${isAmmoCrate ? 'repeating-linear-gradient(0deg,#174c83 0 10px,#2368a5 10px 20px)' : 'repeating-linear-gradient(0deg,#79502b 0 10px,#9a6b39 10px 20px)'}`
+  ].join(';');
+  const fallback = document.createElement('div');
+  fallback.textContent = isAmmoCrate ? 'AMMO' : 'BARRICADES';
+  fallback.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;box-sizing:border-box;padding:4px;color:#fff4cf;font:900 11px/1.1 monospace;letter-spacing:1px;text-align:center;text-shadow:2px 2px #24170d;background:linear-gradient(90deg,transparent 42%,rgba(0,0,0,.22) 42% 58%,transparent 58%)';
+  const band = document.createElement('div');
+  band.style.cssText = 'position:absolute;left:0;right:0;top:10px;height:7px;background:#d4b477;border-top:2px solid #2a1b0e;border-bottom:2px solid #2a1b0e';
+  fallback.appendChild(band);
+  el.appendChild(fallback);
+  const art = document.createElement('img');
+  art.className = 'supply-crate-art';
+  art.src = isAmmoCrate ? BLUE_CRATE_SRC : BROWN_CRATE_SRC;
+  art.alt = '';
+  art.draggable = false;
+  art.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;image-rendering:pixelated;z-index:2';
+  art.addEventListener('error', () => {
+    art.remove();
+    console.warn(`[APOCALYPSE ASSET] Missing crate image ${isAmmoCrate ? BLUE_CRATE_SRC : BROWN_CRATE_SRC}; inline crate graphic remains visible.`);
+  }, { once: true });
+  el.appendChild(art);
+} else {
+  el = document.createElement('img');
+  el.className = kind === 'glock' ? 'glock-item' : kind === 'bandage' ? 'bandage-item' : 'ammo-item';
+  el.src = kind === 'glock' ? GLOCK_SRC : kind === 'bandage' ? 'items/bandages.png' : AMMO_SRC;
+  el.alt = kind === 'glock' ? 'Glock 19' : kind === 'bandage' ? 'Bandages' : 'Ammunition';
+  el.draggable = false;
+}
 el.style.left = `${x - worldOffset}px`;
 el.style.top = `${y}px`;
+// All pickups belong to the dedicated item layer. This layer sits above
+// scenery, zombies and the player, and moves with the game viewport.
 itemContainer.appendChild(el);
 pickups.push({ kind, x, y, el });
+console.info(`[APOCALYPSE PICKUP] Spawned ${kind} at world (${Math.round(x)}, ${Math.round(y)}), screen (${Math.round(x-worldOffset)}, ${Math.round(y)}). Parent: ${el.parentElement && el.parentElement.id}.`);
 }
 
 function setupGunForRun() {
@@ -3497,6 +3675,29 @@ if (ePrompt) { ePrompt.remove(); ePrompt = null; }
 player.isReloading = false;
 player.reloadLeft = 0;
 nextAmmoChunk = 0;
+
+// Create the opening pickups immediately. The cheat is intentionally
+// allowed during the first-run tutorial too: the old code put ALL three
+// spawns inside `if (!tutorialActive)`, so the tutorial silently skipped
+// the crate spawns while its own later step still created the Glock.
+if (forced) {
+  const rowSpacing = 150;
+  const rowWidth = 88 + rowSpacing * 2;
+  const rowScreenStartX = Math.max(
+    24,
+    Math.min(player.x + 170, window.innerWidth - rowWidth - 24)
+  );
+  const rowStartX = rowScreenStartX + worldOffset;
+  const rowY = Math.max(110, Math.min(player.y + 28, window.innerHeight - 190));
+  addPickup('glock', rowStartX, rowY);
+  addPickup('crateAmmo', rowStartX + rowSpacing, rowY);
+  addPickup('crateBarricades', rowStartX + rowSpacing * 2, rowY);
+  nextAmmoChunk = 1;
+} else if (!tutorialActive) {
+  rollSupplyCrates(0);
+  // Chunk zero has already been handled above.
+  nextAmmoChunk = 1;
+}
 
 // E key prompt (pixel-art keycap), shown only when you're near something you can pick up.
 ePrompt = document.createElement('div');
@@ -3517,8 +3718,9 @@ player.hasGun = !!activeChar.stats.startsWithGun;
 player.ammo = { mag: MAX_MAG, reloads: MAX_RELOADS };
 playerSprite.src = idleSprite();
 
-if (!player.hasGun && (forced || Math.random() < GLOCK_SPAWN_CHANCE)) {
-// Somewhere on the visible ground, ahead of the player.
+if (!player.hasGun && !forced && Math.random() < GLOCK_SPAWN_CHANCE) {
+// Normal runs get a randomly positioned Glock. The cheat already placed its
+// Glock in the deterministic row above, so do not create a second one.
 const minX = player.x + worldOffset + 200;
 let maxX = worldOffset + window.innerWidth - 200;
 if (maxX < minX + 50) maxX = minX + 50;
@@ -3532,6 +3734,7 @@ updateAmmoHud();
 // ---------- pickups (glock + ammo) ----------
 function pickupSize(p) {
 if (p.kind === 'bandage') return { w: 42, h: 42 };
+if (p.kind === 'crateAmmo' || p.kind === 'crateBarricades') return { w: 88, h: 78 };
 return {
 w: p.el.offsetWidth || (p.kind === 'glock' ? GLOCK_WIDTH : AMMO_WIDTH),
 h: p.el.offsetHeight || (p.kind === 'glock' ? 44 : 36)
@@ -3540,6 +3743,7 @@ h: p.el.offsetHeight || (p.kind === 'glock' ? 44 : 36)
 
 function pickupEligible(p) {
 if (p.kind === 'glock') return !player.hasGun;
+if (p.kind === 'crateAmmo' || p.kind === 'crateBarricades') return true;
 if (p.kind === 'bandage') return player.health < player.maxHealth;
 return player.hasGun && !hasInfiniteAmmo() &&
 (player.ammo.mag < MAX_MAG || player.ammo.reloads < MAX_RELOADS);
@@ -3562,7 +3766,7 @@ return best;
 function rollAmmoChunk(idx) {
 if (hasInfiniteAmmo()) return;
 if (Math.random() >= AMMO_CHUNK_CHANCE) return;
-const W = window.innerWidth;
+const W = Math.max(640, window.innerWidth);
 const x = idx * W + 140 + Math.random() * Math.max(60, W - 340);
 const y = 110 + Math.random() * Math.max(60, window.innerHeight - 330);
 addPickup('ammo', x, y);
@@ -3572,8 +3776,11 @@ function updatePickups() {
 // One 30% roll for each screen-width of world as it comes into reach.
 const playerWorldX = player.x + worldOffset;
 if (!tutorialActive) {
-  while (nextAmmoChunk * window.innerWidth <= playerWorldX + window.innerWidth) {
-    rollAmmoChunk(nextAmmoChunk++);
+  const chunkWidth = Math.max(640, window.innerWidth);
+  while (nextAmmoChunk * chunkWidth <= playerWorldX + window.innerWidth) {
+    rollAmmoChunk(nextAmmoChunk);
+    rollSupplyCrates(nextAmmoChunk);
+    nextAmmoChunk++;
   }
 }
 
@@ -3598,7 +3805,16 @@ ePrompt.style.display = 'none';
 }
 
 function collectPickup(p) {
-if (p.kind === 'bandage') {
+if (p.kind === 'crateAmmo') {
+  // The crate contains 2–5 rounds and one Glock. Never add a duplicate Glock.
+  const crateAmmo = randInt(2,5);
+  if (!player.hasGun) { player.hasGun = true; player.ammo = { mag: crateAmmo, reloads: 0 }; }
+  else { player.ammo.mag = Math.min(MAX_MAG, player.ammo.mag + crateAmmo); }
+  for (let n=0;n<randInt(1,3);n++) addPickup('bandage', p.x + randInt(-38,38), p.y + randInt(-20,25));
+  if (player.hasGun && !player.isMoving && !player.isCharging && !player.isAttacking) playerSprite.src = idleSprite();
+} else if (p.kind === 'crateBarricades') {
+  barricadeInventory = Math.min(getBarricadeCapacity(), barricadeInventory + 10); updateBarricadeHud();
+} else if (p.kind === 'bandage') {
 player.health = Math.min(player.maxHealth, player.health + 50);
 updateHealthBar();
 showHealingEffect();
@@ -3664,6 +3880,7 @@ window.addEventListener('keydown', (e) => {
 if (e.repeat || isPaused || isRoundShopOpen || !e.key) return;
 if (!gameEl.classList.contains('active') || player.dead) return;
 const k = e.key.toLowerCase();
+if (k === '1') { toggleBarricadeMode(); return; }
 
 if (k === 'e') {
 const target = nearestPickup();
@@ -3690,6 +3907,7 @@ cheatBuffer.push(e.key);
 if (cheatBuffer.length > 3) cheatBuffer.shift();
 if (cheatBuffer.join() === 'ArrowUp,ArrowUp,ArrowDown') {
 cheatArmed = true;
+console.info('[APOCALYPSE CHEAT] Up, Up, Down detected. Both crate test pickups will be forced into the run.');
 cheatBuffer.length = 0;
 }
 });
@@ -3706,7 +3924,7 @@ snd.play().catch(() => {});
 }
 
 function fireGun() {
-if (!player.hasGun || player.dead || isPaused || player.isReloading || player.isShooting) return;
+if (barricadeMode || !player.hasGun || player.dead || isPaused || player.isReloading || player.isShooting) return;
 if (!gameEl.classList.contains('active')) return;
 if (performance.now() - lastShotTime < SHOOT_COOLDOWN_MS) return;
 
@@ -3727,7 +3945,7 @@ shootBullet();
 }
 
 function shootBullet() {
-if (!player.hasGun || player.dead || isPaused || player.isReloading) return;
+if (barricadeMode || !player.hasGun || player.dead || isPaused || player.isReloading) return;
 if (!gameEl.classList.contains('active')) return;
 if (!hasInfiniteAmmo()) {
 if (player.ammo.mag <= 0) return;
@@ -3756,6 +3974,7 @@ bullets.push({ x, y, dir: facingRight ? 1 : -1, el });
 
 gameEl.addEventListener('mousedown', (e) => {
 if (e.button !== 0) return;
+if (barricadeMode) { placeBarricadeAtMouse(); return; }
 fireGun();
 });
 
@@ -3852,6 +4071,7 @@ function tutorialRevealAll() {
 }
 function tutorialShowDialogue(text, onNext) {
   tutorialStopTyping();
+  if (tutorialActionTimer) { clearTimeout(tutorialActionTimer); tutorialActionTimer = null; }
   tutorialDialogueOpen = true;
   isPaused = true;
   tutorialNextAction = onNext || null;
@@ -3873,15 +4093,17 @@ function tutorialCloseDialogue() {
   tutorialDialogueOpen = false;
   tutorialOverlay.classList.remove('active');
   tutorialOverlay.setAttribute('aria-hidden','true');
-  // Leave the scene unobstructed briefly so players can actually look at
-  // the character, item, zombie, shop, or environment being explained.
+  // Keep the brief scene-preview pause short. The action is then run once;
+  // clearing this timer when another dialogue opens prevents stale steps.
   isPaused = false;
   const action = tutorialNextAction;
   tutorialNextAction = null;
   if (action) {
-    window.setTimeout(() => {
+    if (tutorialActionTimer) clearTimeout(tutorialActionTimer);
+    tutorialActionTimer = window.setTimeout(() => {
+      tutorialActionTimer = null;
       if (tutorialActive && !tutorialDialogueOpen) action();
-    }, 950);
+    }, 420);
   }
 }
 tutorialDialog.addEventListener('click', (e) => {
@@ -4010,6 +4232,7 @@ function tutorialOpenShop() {
   tutorialBeginPixelTransition(() => {
   isPaused = false;
   isRoundShopOpen = true;
+  barricadeMode = false; gameEl.classList.remove('barricade-mode'); barricadePreview.style.display = 'none';
   shopBoughtSomething = false;
   player.coins = 100;
   shopSubtitle.textContent = 'Tutorial supplies — everything is free';
@@ -4071,31 +4294,38 @@ function tutorialAfterShopPurchase() {
     });
   });
 }
-function tutorialReturnHome() {
+function tutorialFinishAndReload() {
+  // Persist completion before restarting, so the first-run tutorial cannot
+  // reopen. Keep the game scene covered throughout the reload: no home-screen
+  // flash or one-second pause between tutorial completion and fresh startup.
+  tutorialStopTyping();
+  if (tutorialActionTimer) { clearTimeout(tutorialActionTimer); tutorialActionTimer = null; }
+  tutorialActive = false;
+  tutorialCompleted = true;
+  tutorialStage = 'complete';
+  tutorialDialogueOpen = false;
+  tutorialNextAction = null;
   isPaused = true;
-  tutorialBeginPixelTransition(() => {
-    gameEl.classList.remove('active');
-    selectEl.classList.remove('active');
-    homeEl.classList.add('active');
-    inSelect = false;
-    isRoundShopOpen = false;
-    isPaused = true;
-    tutorialShowDialogue("And that's it! Anything else you need — I think you'll figure it out on your journey. Good luck! And don't die.", () => {
-      tutorialActive = false;
-      tutorialCompleted = true;
-      tutorialStage = 'complete';
-      isPaused = false;
-      try { localStorage.setItem('apocalypseTutorialComplete','true'); } catch (_) {}
-      tutorialDialogueOpen = false;
-      tutorialOverlay.classList.remove('active');
-      tutorialOverlay.setAttribute('aria-hidden','true');
-      // Persist completion first, then perform a clean page restart. All world
-      // chunks, entities, timers, audio state and transient tutorial state are
-      // rebuilt from scratch, while localStorage prevents the tutorial replay.
-      try { localStorage.setItem('apocalypseTutorialComplete','true'); } catch (_) {}
-      syncHomeMusic();
-      window.setTimeout(() => window.location.reload(), 180);
-    });
+  try { localStorage.setItem('apocalypseTutorialComplete','true'); } catch (_) {}
+  tutorialOverlay.classList.remove('active');
+  tutorialOverlay.setAttribute('aria-hidden','true');
+
+  pixelOverlay.style.zIndex = '1300';
+  pixelOverlay.classList.remove('in','out');
+  pixelOverlay.style.opacity = '0';
+  pixelOverlay.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' fill='%230b0b0d'/%3E%3Crect width='16' height='16' fill='%23111' opacity='.5'/%3E%3C/svg%3E")`;
+  void pixelOverlay.offsetWidth;
+  pixelOverlay.classList.add('out');
+  // The overlay is fully covering the screen before reloading the page.
+  window.setTimeout(() => window.location.reload(), 640);
+}
+
+function tutorialReturnHome() {
+  // Finish on the tutorial scene rather than briefly switching to the home
+  // screen. The next click runs the same clean page refresh under the pixel wipe.
+  isPaused = true;
+  tutorialShowDialogue("And that's it! Anything else you need — I think you'll figure it out on your journey. Good luck! And don't die!", () => {
+    tutorialFinishAndReload();
   });
 }
 
@@ -4132,6 +4362,210 @@ purchaseShopOffer = function(index) {
 // Startup loader: discover and wait for the game's referenced assets before
 // revealing the home screen. Failed optional files are settled and reported
 // rather than leaving the game permanently stuck on the loading screen.
+
+/* ==========================================================
+WEATHER / RADIO WARNINGS / SUPPLY CRATES / BARRICADES
+========================================================== */
+function setRandomWeather() {
+  // Keep the playfield visually consistent. Random rain/storm used to draw
+  // bright diagonal streaks across the whole screen and storm flashes could
+  // make the game look washed out immediately after starting a wave.
+  if (stormFlashTimer) { clearInterval(stormFlashTimer); stormFlashTimer = null; }
+  if (weatherOverlay) {
+    weatherOverlay.className = 'clear';
+    weatherOverlay.style.backgroundColor = 'transparent';
+  }
+}
+
+function getBarricadeCapacity() {
+  return Math.max(DEFAULT_BARRICADE_CAPACITY, Number(activeChar?.stats?.barricadeCapacity) || 0);
+}
+function updateBarricadeHud() {
+  if (barricadeCountEl) barricadeCountEl.textContent = String(barricadeInventory);
+  if (barricadeHud) barricadeHud.style.opacity = barricadeInventory > 0 ? '1' : '.72';
+}
+function toggleBarricadeMode() {
+  if (player.dead || isPaused || isRoundShopOpen || !gameEl.classList.contains('active')) return;
+  if (!barricadeMode && barricadeInventory <= 0) return;
+  barricadeMode = !barricadeMode;
+  gameEl.classList.toggle('barricade-mode', barricadeMode);
+  barricadePreview.style.display = barricadeMode && barricadeInventory > 0 ? 'block' : 'none';
+  if (barricadeMode) { player.isShooting = false; player.isReloading = false; }
+}
+function updateBarricadePreview() {
+  if (!barricadeMode || !barricadeInventory || isPaused || isRoundShopOpen || !gameEl.classList.contains('active')) {
+    barricadePreview.style.display = 'none'; return;
+  }
+  barricadePreview.style.display = 'block';
+  barricadePreview.style.left = `${barricadeMouse.x}px`;
+  barricadePreview.style.top = `${barricadeMouse.y}px`;
+}
+gameEl.addEventListener('mousemove', e => {
+  const rect = gameEl.getBoundingClientRect();
+  barricadeMouse.x = e.clientX - rect.left;
+  barricadeMouse.y = e.clientY - rect.top;
+});
+function updateBarricadePositions() {
+  for (const b of barricades) {
+    if (!b.el || !b.el.isConnected) continue;
+    b.el.style.left = `${b.x - worldOffset}px`;
+    b.el.style.top = `${b.y}px`;
+  }
+}
+function placeBarricadeAtMouse() {
+  if (!barricadeMode || barricadeInventory <= 0 || isPaused || isRoundShopOpen || player.dead) return;
+  const rect = gameEl.getBoundingClientRect();
+  const gameWidth = rect.width || window.innerWidth;
+  const gameHeight = rect.height || window.innerHeight;
+  // Keep the whole sprite inside the visible play area; convert X to a permanent world coordinate.
+  const screenX = Math.max(76, Math.min(gameWidth - 76, barricadeMouse.x));
+  const screenY = Math.max(82, Math.min(gameHeight - 82, barricadeMouse.y));
+  const worldX = screenX + worldOffset;
+  const box = {x:worldX-94,y:screenY-30,w:188,h:60};
+  if (barricades.some(b => aabbOverlap(box,b.box))) return;
+  // Do not place a barrier on top of the player or a zombie.
+  if (aabbOverlap(box, getPlayerHitbox())) return;
+  if (zombies.some(z => !z.isDying && aabbOverlap(box, getZombieHitbox(z)))) return;
+  const el = document.createElement('img');
+  el.className = 'barricade-world'; el.src = BARRICADE_SRC; el.alt = 'Placed barricade'; el.draggable = false;
+  el.style.left = `${worldX - worldOffset}px`; el.style.top = `${screenY}px`;
+  barricadeContainer.appendChild(el);
+  barricades.push({x:worldX,y:screenY,box,el,wave:currentWave});
+  barricadeInventory--; updateBarricadeHud();
+  if (!barricadeInventory) { barricadeMode=false; gameEl.classList.remove('barricade-mode'); barricadePreview.style.display='none'; }
+}
+function getBlockingBarricade(box) {
+  return barricades.find(b => aabbOverlap(box,b.box)) || null;
+}
+function collidesWithBarricade(box) {
+  return !!getBlockingBarricade(box);
+}
+function getZombieHitboxAt(x,y) {
+  return {x:x+BODY_HIT_OX,y:y+BODY_HIT_OY,w:BODY_HIT_W,h:BODY_HIT_H};
+}
+function moveZombieAroundBarricade(z, desiredX, desiredY, step, blocker) {
+  const gameHeight = gameEl.clientHeight || window.innerHeight;
+  const minTop = 0;
+  const maxTop = Math.max(minTop, gameHeight - 140);
+  let route = z.barricadeRoute;
+  const direction = Math.sign(desiredX - z.x) || 1;
+
+  // Keep a two-stage route: clear the barrier vertically, then move past its far edge.
+  // This prevents the zombie from repeatedly sidestepping and getting stuck at the corner.
+  if (!route || route.barrier !== blocker || route.direction !== direction) {
+    const candidates = [
+      blocker.box.y - BODY_HIT_OY - BODY_HIT_H - 8,
+      blocker.box.y + blocker.box.h - BODY_HIT_OY + 8
+    ].filter(y => y >= minTop && y <= maxTop)
+      .sort((a,b) => Math.abs(a-z.y) - Math.abs(b-z.y));
+    let chosenY = null;
+    for (const targetY of candidates) {
+      const nextY = z.y + Math.sign(targetY - z.y) * Math.min(Math.abs(targetY-z.y), step);
+      if (Math.abs(targetY-z.y) < 0.5 || !collidesWithBarricade(getZombieHitboxAt(z.x, nextY))) {
+        chosenY = targetY;
+        break;
+      }
+    }
+    if (chosenY === null) {
+      // If neither side is reachable, back away from the barricade and retry next frame.
+      const awayX = z.x - direction * step;
+      if (!collidesWithBarricade(getZombieHitboxAt(awayX, z.y))) { z.x = awayX; return true; }
+      return false;
+    }
+    const passX = direction > 0
+      ? blocker.box.x + blocker.box.w - BODY_HIT_OX + 10
+      : blocker.box.x - BODY_HIT_OX - BODY_HIT_W - 10;
+    route = z.barricadeRoute = { barrier:blocker, sideY:chosenY, passX, direction };
+  }
+
+  if (Math.abs(z.y - route.sideY) > 1) {
+    const nextY = z.y + Math.sign(route.sideY-z.y) * Math.min(Math.abs(route.sideY-z.y), step);
+    if (!collidesWithBarricade(getZombieHitboxAt(z.x, nextY))) {
+      z.y = nextY;
+      return true;
+    }
+    // Another barricade blocks this side; discard the route so the other edge can be selected.
+    z.barricadeRoute = null;
+  } else {
+    const deltaX = route.passX - z.x;
+    const nextX = z.x + Math.sign(deltaX) * Math.min(Math.abs(deltaX), step);
+    if (!collidesWithBarricade(getZombieHitboxAt(nextX, z.y))) {
+      z.x = nextX;
+      if (Math.abs(deltaX) <= step + 1) z.barricadeRoute = null;
+      return true;
+    }
+    z.barricadeRoute = null;
+  }
+
+  // Final escape options for tight clusters: move backward, then try either side.
+  const awayX = z.x - direction * step;
+  if (!collidesWithBarricade(getZombieHitboxAt(awayX, z.y))) { z.x = awayX; return true; }
+  for (const sign of [-1, 1]) {
+    const nextY = Math.max(minTop, Math.min(maxTop, z.y + sign * step));
+    if (!collidesWithBarricade(getZombieHitboxAt(z.x, nextY))) { z.y = nextY; return true; }
+  }
+  return false;
+}
+function rollSupplyCrates(idx) {
+  if (tutorialActive) return;
+  const W = Math.max(640, window.innerWidth);
+  const chunkStart = idx * W;
+  const yRange = Math.max(60, window.innerHeight - 330);
+
+  // The opening chunk always contains both crate types, so a new run does not
+  // depend on two low-probability rolls to show the feature at all.
+  // After that, barricade crates appear at least every second chunk and ammo
+  // crates at least every fourth chunk, with extra random drops between them.
+  const guaranteedBarricades = idx === 0 || idx % 2 === 0;
+  const guaranteedAmmo = idx === 0 || idx % 4 === 0;
+  const spawnBarricades = guaranteedBarricades || Math.random() < 0.18;
+  const spawnAmmo = guaranteedAmmo || Math.random() < 0.06;
+
+  if (spawnAmmo) {
+    const x = chunkStart + W * 0.36 + randInt(-35, 35);
+    const y = 110 + Math.random() * yRange;
+    addPickup('crateAmmo', x, y);
+  }
+  if (spawnBarricades) {
+    const x = chunkStart + W * 0.66 + randInt(-45, 45);
+    const y = 110 + Math.random() * yRange;
+    addPickup('crateBarricades', x, y);
+  }
+}
+function startZombieHorde(wave = currentWave) {
+  if (player.dead || isRoundShopOpen || tutorialActive || !gameEl.classList.contains('active')) return;
+  hordeActive = true;
+  const normalWaveCount = 3 + wave;
+  const hordeCount = Math.max(1, Math.ceil(normalWaveCount * 2.5));
+  // Put the line just beyond the current viewport's right edge.
+  const spawnX = worldOffset + window.innerWidth + 90;
+  const top = 100;
+  const usableHeight = Math.max(120, window.innerHeight - 230);
+  for (let i = 0; i < hordeCount; i++) {
+    const y = top + (hordeCount === 1 ? usableHeight / 2 : (usableHeight * i / (hordeCount - 1)));
+    spawnZombie(spawnX, y, wave, true);
+  }
+  nextRadioWave = currentWave + randInt(1, 10);
+}
+
+function showRadioWarning() {
+  if (radioWarningOpen || isRoundShopOpen || player.dead || tutorialActive) return;
+  radioWarningOpen = true;
+  isPaused = true;
+  const characterName = activeChar && (activeChar.name || activeChar.title) ? (activeChar.name || activeChar.title) : 'SURVIVOR';
+  radioMessage.innerHTML = `<strong>Radio Cackles:</strong> ${String(characterName).toUpperCase()}! There's a huge zombie horde heading your way! Make sure to set up barricades and stock up on ammo.`;
+  radioWarning.classList.add('active');
+  radioWarning.setAttribute('aria-hidden','false');
+  setTimeout(() => {
+    radioWarning.classList.remove('active');
+    radioWarning.setAttribute('aria-hidden','true');
+    setTimeout(() => {
+      radioWarningOpen = false;
+      if (!player.dead && !isRoundShopOpen) { isPaused = false; lastTime = performance.now(); startZombieHorde(currentWave); }
+    }, 560);
+  }, 5200);
+}
+
 (async function startAfterAllAssetsAreChecked() {
   const loader = document.getElementById('startupLoader');
   const fill = document.getElementById('startupLoaderFill');
@@ -4165,6 +4599,7 @@ purchaseShopOffer = function(index) {
   if (typeof ENVIRONMENT_ASSETS !== 'undefined') {
     ENVIRONMENT_ASSETS.forEach(asset => imagePaths.add(asset.src));
   }
+  ['items/barricades.png','items/crate.png','items/crate_2.png'].forEach(src => imagePaths.add(src));
   document.querySelectorAll('img[src]').forEach(img => {
     if (img.getAttribute('src')) imagePaths.add(img.getAttribute('src'));
   });
@@ -4178,6 +4613,7 @@ purchaseShopOffer = function(index) {
   });
 
   const tasks = [];
+  const failedAssets = [];
   let completed = 0;
   const total = imagePaths.size + audioPaths.size;
   const update = (label) => {
@@ -4195,7 +4631,8 @@ purchaseShopOffer = function(index) {
       const finish = (ok) => {
         if (settled) return;
         settled = true;
-        update(ok ? `Loading image: ${src}` : `Checking unavailable image: ${src}`);
+        if (!ok) failedAssets.push(`IMAGE ${src}`);
+        update(ok ? `Loading image: ${src}` : `Missing image: ${src}`);
         resolve();
       };
       img.onload = () => finish(true);
@@ -4212,7 +4649,8 @@ purchaseShopOffer = function(index) {
       const finish = (ok) => {
         if (settled) return;
         settled = true;
-        update(ok ? `Loading audio: ${src}` : `Checking unavailable audio: ${src}`);
+        if (!ok) failedAssets.push(`AUDIO ${src}`);
+        update(ok ? `Loading audio: ${src}` : `Missing audio: ${src}`);
         resolve();
       };
       audio.preload = 'auto';
@@ -4251,9 +4689,18 @@ purchaseShopOffer = function(index) {
   // Confirm a stable second check before allowing the game screen to appear.
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   fill.style.width = '100%';
-  count.textContent = `${total} / ${total} assets loaded`;
-  status.textContent = 'All assets checked. Starting game...';
-  await new Promise(resolve => setTimeout(resolve, 250));
+  if (failedAssets.length) {
+    const uniqueFailures = [...new Set(failedAssets)];
+    window.apocalypseAssetFailures = uniqueFailures;
+    count.textContent = `${total - uniqueFailures.length} / ${total} assets found · ${uniqueFailures.length} missing`;
+    status.textContent = 'Some files returned 404. Check the browser console for exact paths.';
+    console.error('[APOCALYPSE] Missing local assets. Make sure these paths exist beside index.html:', uniqueFailures);
+  } else {
+    count.textContent = `${total} / ${total} assets loaded`;
+    status.textContent = 'All assets checked. Starting game...';
+    window.apocalypseAssetFailures = [];
+  }
+  await new Promise(resolve => setTimeout(resolve, 900));
   loader.classList.add('hidden');
 })();
 
