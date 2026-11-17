@@ -1169,9 +1169,75 @@ filter: drop-shadow(2px 3px 0 rgba(0,0,0,.35));
   .tutorial-hint { font-size:10px; }
 }
 
+
+/* Startup loading screen */
+#startupLoader {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse at 50% 55%, rgba(255,255,255,0.055), transparent 58%),
+    #0b0b0d;
+  color: #f2f2f2;
+  text-align: center;
+}
+#startupLoader.hidden { display: none; }
+#startupLoader .loader-title {
+  font-family: 'Dead Kansas', 'Oswald', sans-serif;
+  font-weight: normal;
+  font-size: clamp(30px, 5vw, 58px);
+  line-height: 1;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  text-shadow: 0 3px 0 #000, 0 0 28px rgba(255,255,255,.12);
+  margin-bottom: 34px;
+}
+#startupLoader .loader-track {
+  width: min(430px, 82vw);
+  height: 18px;
+  padding: 3px;
+  border: 2px solid #dedede;
+  background: #111115;
+  box-shadow: 4px 4px 0 #000;
+}
+#startupLoader .loader-fill {
+  width: 0%;
+  height: 100%;
+  background: #e8e8e8;
+  transition: width .12s linear;
+}
+#startupLoader .loader-status {
+  margin-top: 18px;
+  min-height: 22px;
+  color: #c8c8ce;
+  font: 500 14px 'Oswald', sans-serif;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+#startupLoader .loader-count {
+  margin-top: 7px;
+  color: #85858e;
+  font: 12px 'Oswald', sans-serif;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
 </style>
 </head>
 <body>
+
+<div id="startupLoader" role="status" aria-live="polite">
+  <div class="loader-title">Apocalypse</div>
+  <div class="loader-track"><div class="loader-fill" id="startupLoaderFill"></div></div>
+  <div class="loader-status" id="startupLoaderStatus">Preparing assets...</div>
+  <div class="loader-count" id="startupLoaderCount">0 / 0 assets loaded</div>
+</div>
+
 
 <section id="home" class="screen active">
 <div class="scanlines"></div>
@@ -4061,6 +4127,135 @@ purchaseShopOffer = function(index) {
   originalTutorialPurchaseShopOffer(index);
   if (tutorialActive && tutorialStage === 'shop_buy') tutorialAfterShopPurchase();
 };
+
+
+// Startup loader: discover and wait for the game's referenced assets before
+// revealing the home screen. Failed optional files are settled and reported
+// rather than leaving the game permanently stuck on the loading screen.
+(async function startAfterAllAssetsAreChecked() {
+  const loader = document.getElementById('startupLoader');
+  const fill = document.getElementById('startupLoaderFill');
+  const status = document.getElementById('startupLoaderStatus');
+  const count = document.getElementById('startupLoaderCount');
+  const imagePaths = new Set();
+  const audioPaths = new Set();
+
+  // Collect literal local image/audio references throughout the page and code.
+  const sourceText = document.documentElement.outerHTML;
+  const pathPattern = /(?:^|["'(])((?:\.{0,2}\/)?[a-zA-Z0-9 _./-]+\.(?:png|jpe?g|webp|gif|svg|mp3|wav|ogg|m4a|aac))(?:["')?#]|$)/gim;
+  let match;
+  while ((match = pathPattern.exec(sourceText)) !== null) {
+    const path = match[1].replace(/^\.\//, '');
+    if (/^(https?:|data:|blob:)/i.test(path)) continue;
+    if (/\.(?:mp3|wav|ogg|m4a|aac)$/i.test(path)) audioPaths.add(path);
+    else imagePaths.add(path);
+  }
+
+  // Include every generated character animation frame (including reloads).
+  if (typeof ROSTER !== 'undefined') {
+    for (const character of ROSTER) {
+      const sprites = character.sprites;
+      [sprites.idle, sprites.gunIdle, ...sprites.walk, ...sprites.stab, ...sprites.reload]
+        .filter(Boolean).forEach(path => imagePaths.add(path));
+    }
+  }
+
+  // Include dynamically-created assets and backgrounds that may not appear as
+  // literal src attributes in the initial document.
+  if (typeof ENVIRONMENT_ASSETS !== 'undefined') {
+    ENVIRONMENT_ASSETS.forEach(asset => imagePaths.add(asset.src));
+  }
+  document.querySelectorAll('img[src]').forEach(img => {
+    if (img.getAttribute('src')) imagePaths.add(img.getAttribute('src'));
+  });
+
+  const audioElements = [
+    footstepsAudio, coinPickupAudio, glockShotAudio, radiationAudio,
+    zombieGroansAudio, homeMusicAudio
+  ].filter(Boolean);
+  audioElements.forEach(audio => {
+    if (audio.getAttribute('src')) audioPaths.add(audio.getAttribute('src'));
+  });
+
+  const tasks = [];
+  let completed = 0;
+  const total = imagePaths.size + audioPaths.size;
+  const update = (label) => {
+    completed++;
+    const percent = total ? Math.min(100, completed / total * 100) : 100;
+    fill.style.width = percent + '%';
+    status.textContent = label;
+    count.textContent = `${completed} / ${total} assets loaded`;
+  };
+
+  for (const src of imagePaths) {
+    tasks.push(new Promise(resolve => {
+      const img = new Image();
+      let settled = false;
+      const finish = (ok) => {
+        if (settled) return;
+        settled = true;
+        update(ok ? `Loading image: ${src}` : `Checking unavailable image: ${src}`);
+        resolve();
+      };
+      img.onload = () => finish(true);
+      img.onerror = () => finish(false);
+      img.src = src;
+      if (img.complete) finish(img.naturalWidth > 0);
+    }));
+  }
+
+  for (const src of audioPaths) {
+    tasks.push(new Promise(resolve => {
+      const audio = new Audio();
+      let settled = false;
+      const finish = (ok) => {
+        if (settled) return;
+        settled = true;
+        update(ok ? `Loading audio: ${src}` : `Checking unavailable audio: ${src}`);
+        resolve();
+      };
+      audio.preload = 'auto';
+      audio.addEventListener('canplaythrough', () => finish(true), { once: true });
+      audio.addEventListener('loadeddata', () => {
+        if (audio.readyState >= 3) finish(true);
+      }, { once: true });
+      audio.addEventListener('error', () => finish(false), { once: true });
+      audio.src = src;
+      audio.load();
+      if (audio.readyState >= 3) finish(true);
+    }));
+  }
+
+  status.textContent = 'Loading game assets...';
+  count.textContent = `0 / ${total} assets loaded`;
+
+  // Wait for all assets, stylesheets and custom fonts to finish resolving.
+  await Promise.all(tasks);
+  status.textContent = 'Checking fonts and interface...';
+  await (document.fonts ? document.fonts.ready : Promise.resolve());
+
+  // A second verification pass catches any image still incomplete or added
+  // while the first batch was loading.
+  status.textContent = 'Verifying everything is ready...';
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const verifyImages = Array.from(imagePaths);
+  await Promise.all(verifyImages.map(src => new Promise(resolve => {
+    const img = new Image();
+    if (img.complete) return resolve();
+    img.onload = img.onerror = () => resolve();
+    img.src = src;
+  })));
+  await (document.fonts ? document.fonts.ready : Promise.resolve());
+
+  // Confirm a stable second check before allowing the game screen to appear.
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  fill.style.width = '100%';
+  count.textContent = `${total} / ${total} assets loaded`;
+  status.textContent = 'All assets checked. Starting game...';
+  await new Promise(resolve => setTimeout(resolve, 250));
+  loader.classList.add('hidden');
+})();
 
 </script>
 </body>
